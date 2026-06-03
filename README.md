@@ -312,3 +312,44 @@ Apache-2.0. See [LICENSE](LICENSE).
 - [DSSE spec](https://github.com/secure-systems-lab/dsse) — Dead Simple Signing Envelope
 - [Shapiro et al. 2011 — SEC/CRDTs](https://inria.hal.science/inria-00555588v1/document)
 - [Castro & Liskov 1999 — PBFT](https://dl.acm.org/doi/10.1145/296806.296824)
+
+---
+
+## Getting Started (When Available)
+
+> **Status:** This repo is currently a design skeleton. No Zarf package has been published yet.
+> Watch this repo for release announcements.
+
+### Prerequisites (for future deployment)
+
+- [Zarf](https://docs.zarf.dev/getting-started/install/) v0.38+
+- [UDS CLI](https://uds.defenseunicorns.com/docs/getting-started/) v0.14+
+- [peat](https://github.com/defenseunicorns/peat) node in your cluster
+
+### When a release ships, deployment will follow this pattern:
+
+```bash
+zarf package pull oci://ghcr.io/szl-holdings/szl-mesh:<tag>
+cosign verify-blob --certificate-identity-regexp   "https://github.com/szl-holdings/szl-mesh/.github/workflows/.*"   --certificate-oidc-issuer https://token.actions.githubusercontent.com   --bundle zarf-package-szl-mesh-amd64-<tag>.tar.zst.sigstore.json   zarf-package-szl-mesh-amd64-<tag>.tar.zst
+uds deploy oci://ghcr.io/szl-holdings/szl-mesh:<tag>
+```
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md). All commits require DCO sign-off:
+
+```bash
+git commit -s -m "your message"
+```
+
+## Security
+
+See [SECURITY.md](SECURITY.md) for vulnerability disclosure policy.
+
+## License
+
+Apache-2.0. See [LICENSE](LICENSE).
+
+---
+
+© SZL Holdings · Doctrine v11 LOCKED (749/14/163, kernel `c7c0ba17`) · Λ = Conjecture 1 · SLSA L1 honest · Section 889 = 5 vendors
