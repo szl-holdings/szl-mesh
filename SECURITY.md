@@ -12,7 +12,7 @@ SZL-MESH is an **early-stage protocol skeleton**. The following is our honest, u
 
 | Property | Status | Notes |
 |----------|--------|-------|
-| SLSA Level | **L1** | Provenance assertions generated at build time. NOT L3. |
+| SLSA Level | **L1** | Provenance assertions generated at build time (not L3, not L2, L1 honest). |
 | Ed25519 signatures | Design-complete | Node identity and CRDT op signing — not yet implemented |
 | DSSE receipt spec | Design-complete | See `spec/01-dsse-receipts.md` — not yet implemented |
 | DCO sign-off | Active | Every commit carries `Signed-off-by` trailer |
