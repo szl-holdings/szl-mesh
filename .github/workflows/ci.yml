@@ -24,6 +24,7 @@ on:
 permissions:
   contents: read
   id-token: write   # SLSA L1 provenance
+  attestations: write  # required for actions/attest-build-provenance
 
 jobs:
   # ── DCO Check ────────────────────────────────────────────────────
