@@ -71,7 +71,7 @@ jobs:
           curl -sSL \
             "https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOC_VERSION}/protoc-${PROTOC_VERSION}-linux-x86_64.zip" \
             -o protoc.zip
-          unzip -q protoc.zip -d /usr/local
+          sudo unzip -q protoc.zip -d /usr/local
           protoc --version
 
       - name: Install buf
