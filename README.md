@@ -1,3 +1,41 @@
+<!-- szl-investor-header -->
+<div align="center">
+
+# szl-mesh
+
+### A doctrine-pinned coordination layer that lets SZL's governance organs stay in sync across an air-gapped fleet, even when nodes go offline.
+
+[![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg?style=flat-square)](LICENSE) [![Build](https://github.com/szl-holdings/szl-mesh/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/szl-holdings/szl-mesh/actions/workflows/ci.yml) [![Doctrine v11](https://img.shields.io/badge/Doctrine-v11_LOCKED-3b82f6?style=flat-square)](https://github.com/szl-holdings/.github/tree/main/doctrine) [![SLSA](https://img.shields.io/badge/SLSA-L1_honest-22c55e?style=flat-square)](https://slsa.dev/spec/v1.0/levels)
+
+[Docs](https://docs.szlholdings.com) · [Quickstart](https://docs.szlholdings.com/quickstart) · [SZL Holdings](https://szlholdings.com)
+
+</div>
+
+## 💡 Why it matters
+
+It brings always-converging shared state and Byzantine-fault-tolerant agreement to edge and disconnected deployments, so a sovereign fleet keeps making consistent, signed governance decisions without a central server.
+
+## ▶️ Live demo
+
+_Internal / private repository — no public demo surface. See [docs.szlholdings.com](https://docs.szlholdings.com) for the public product walkthrough._
+
+## ⚡ Quick start (30 seconds)
+
+```bash
+git clone https://github.com/szl-holdings/szl-mesh.git
+cd szl-mesh
+make quickstart   # or: see docs.szlholdings.com/quickstart
+```
+
+## 🔍 How it works
+
+In two sentences: this component is part of SZL's governed-AI mesh — it enforces policy and emits signed, replayable audit receipts so every AI action can be verified after the fact. The full mathematical foundation, formal proofs, and protocol details are documented below and in the [technical docs](https://docs.szlholdings.com).
+
+---
+
+<details>
+<summary><strong>📐 Full technical detail, math, and proofs (the proof, not the pitch)</strong></summary>
+
 # SZL-MESH
 
 **Doctrine-pinned CRDT mesh layered on peat — 7 inventions beyond UDS Fleet**
@@ -353,3 +391,16 @@ Apache-2.0. See [LICENSE](LICENSE).
 ---
 
 © SZL Holdings · Doctrine v11 LOCKED (749/14/163, kernel `c7c0ba17`) · Λ = Conjecture 1 · SLSA L1 honest · Section 889 = 5 vendors
+
+
+</details>
+
+<!-- szl-doctrine-footer -->
+
+---
+
+### Citation & doctrine
+
+Cite this work via [`CITATION.cff`](CITATION.cff). Math foundations: [szl-papers](https://github.com/szl-holdings/szl-papers) · [lutar-lean](https://github.com/szl-holdings/lutar-lean) (kernel `c7c0ba17`).
+
+<sub>Λ Conjecture 1 (not a theorem) · 749/14/163 v11 LOCKED (kernel `c7c0ba17`) · SLSA L1 honest · Section 889 = 5 vendors · [SZL Holdings](https://szlholdings.com) · Apache-2.0 code · CC-BY-4.0 papers</sub>
