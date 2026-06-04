@@ -1,0 +1,26 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+type: software
+title: "SZL Holdings — szl-mesh"
+version: "1.0.0"
+date-released: "2026-06-04"
+license: Apache-2.0
+repository-code: "https://github.com/szl-holdings/szl-mesh"
+url: "https://szlholdings.com"
+abstract: >
+  A doctrine-pinned coordination layer that lets SZL's governance organs stay in sync across an air-gapped fleet, even when nodes go offline.
+keywords:
+  - governance
+  - agentic-ai
+  - doctrine-v11
+  - dsse
+  - sovereign-ai
+authors:
+  - name: "SZL Holdings"
+    website: "https://szlholdings.com"
+    email: "hello@szlholdings.ai"
+  - name: "Yachay"
+    email: "yachay@szlholdings.ai"
+contact:
+  - email: "hello@szlholdings.ai"
+    name: "SZL Holdings"
