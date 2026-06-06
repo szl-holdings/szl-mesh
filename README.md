@@ -81,7 +81,7 @@ See: [`spec/01-dsse-receipts.md`](spec/01-dsse-receipts.md)
 
 **SZL-MESH adds:** A dual-track state model coexisting in the same CRDT store:
 
-| Track | Condition | Rosie Display | Actionable? |
+| Track | Condition | Operator Display | Actionable? |
 |-------|-----------|---------------|-------------|
 | **AUTHORIZED** | CRDT change carries valid DSSE receipt under doctrine `749/14/163` | Solid indicator | Yes — command decisions |
 | **OBSERVED** | CRDT change present but no valid receipt (partition, stale doctrine, peat-native node) | Dashed indicator | No — situational awareness only |
@@ -182,11 +182,11 @@ See: [`spec/06-crdt-revocation.md`](spec/06-crdt-revocation.md)
 
 ---
 
-### 7. Sentra Governance Metrics (First-Class Telemetry Channel)
+### 7. Governance Metrics (First-Class Telemetry Channel)
 
 **Peat:** `GetSyncStats` RPC for basic sync monitoring. CDC events to Kafka/NATS.
 
-**SZL-MESH adds:** Receipt health metrics fed into sentra's immune filter — anomaly detection on governance integrity:
+**SZL-MESH adds:** Receipt health metrics fed into the a11oy policy/immune-gate — anomaly detection on governance integrity:
 
 ```
 szl_mesh_authorized_fraction{formation_id, cell_id}
@@ -215,7 +215,7 @@ See: [`spec/07-sentra-governance-metrics.md`](spec/07-sentra-governance-metrics.
 ┌─────────────────────────────────────────────────────────────────┐
 │  SZL-MESH LAYER STACK                                           │
 ├─────────────────────────────────────────────────────────────────┤
-│  L5: ROSIE FLEET COCKPIT                                        │
+│  L5: OPERATOR FLEET COCKPIT                                     │
 │  Reads verified-only state from SZL-MESH hub node              │
 │  Displays AUTHORIZED vs. OBSERVED distinction in UI            │
 ├─────────────────────────────────────────────────────────────────┤
@@ -257,7 +257,7 @@ See: [`spec/07-sentra-governance-metrics.md`](spec/07-sentra-governance-metrics.
 | Skip-layer aggregation | ✗ | ✓ O(n) for receipted changes (Conjecture 1) |
 | Byzantine corroboration | ✗ | ✓ k-of-n soft-voting |
 | Air-gap CRDT revocation | ✗ | ✓ Grow-only CRDT set |
-| Governance integrity metrics | ✗ | ✓ Sentra integration |
+| Governance integrity metrics | ✗ | ✓ policy/immune-gate integration |
 | Doctrine-gated enrollment | ✗ | ✓ |
 | Section 889 vendor check | ✗ | ✓ (5 vendors) |
 
