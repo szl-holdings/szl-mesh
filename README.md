@@ -5,7 +5,7 @@
 
 ### A doctrine-pinned coordination layer that keeps SZL's governance services in sync across an air-gapped fleet, even when nodes go offline.
 
-[![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg?style=flat-square)](LICENSE) [![Build](https://github.com/szl-holdings/szl-mesh/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/szl-holdings/szl-mesh/actions/workflows/ci.yml) [![Doctrine v11](https://img.shields.io/badge/Doctrine-v11_LOCKED-3b82f6?style=flat-square)](https://github.com/szl-holdings/.github/tree/main/doctrine) [![SLSA](https://img.shields.io/badge/SLSA-L1%2BL2_honest-22c55e?style=flat-square)](https://slsa.dev/spec/v1.0/levels)
+[![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg?style=flat-square)](LICENSE) [![Build](https://github.com/szl-holdings/szl-mesh/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/szl-holdings/szl-mesh/actions/workflows/ci.yml) [![Doctrine v11](https://img.shields.io/badge/Doctrine-v11_LOCKED-3b82f6?style=flat-square)](https://github.com/szl-holdings/.github/tree/main/doctrine) [![SLSA](https://img.shields.io/badge/SLSA-L1_honest_%C2%B7_L2_roadmap-22c55e?style=flat-square)](https://slsa.dev/spec/v1.0/levels)
 
 [Docs](https://szl-holdings.github.io/docs-site) · [Quickstart](https://szl-holdings.github.io/docs-site/quickstart) · [SZL Holdings](https://a11oy.net)
 
@@ -42,7 +42,7 @@ In two sentences: this component is part of SZL's governed-AI mesh — it enforc
 
 **Doctrine-pinned CRDT mesh layered on peat — 7 inventions beyond UDS Fleet**
 
-> **Doctrine:** v11 LOCKED `749/14/163` · Kernel commit `c7c0ba17` · Λ = Conjecture 1 (NOT theorem) · SLSA L1+L2 (honest — NOT L3)  
+> **Doctrine:** v11 LOCKED `749/14/163` · Kernel commit `c7c0ba17` · Λ = Conjecture 1 (NOT theorem) · SLSA L1 honest · L2 verified-provenance on roadmap (NOT L3)  
 > **Status:** Skeleton — Design complete, implementation in progress  
 > **Date:** 2026-06-02  
 > **Prepared by:** SZL Holdings Research (PhD Distributed Systems)
@@ -207,7 +207,7 @@ szl_mesh_doctrine_version_mismatch_count{formation_id}
 
 No existing mesh protocol (peat, Consul, Istio, Linkerd) exposes governance-layer integrity metrics. This is unique to SZL-MESH.
 
-See: [`spec/07-sentra-governance-metrics.md`](spec/07-sentra-governance-metrics.md)
+See: [`spec/07-sentra-governance-metrics.md`](spec/07-sentra-governance-metrics.md) — governance metrics for the **CHAPAQ** egress immune-inspector (spec filename is an immutable infra coordinate, kept verbatim).
 
 ---
 
@@ -315,7 +315,7 @@ cd examples/hello-mesh
 |-----------|-------|
 | Doctrine version | `749/14/163` (LOCKED) |
 | Kernel commit | `c7c0ba17` |
-| SLSA level | L1+L2 honest (NOT L3) |
+| SLSA level | L1 honest · L2 verified-provenance on roadmap (NOT L3) |
 | Section 889 vendors | Exactly 5: Huawei, ZTE, Hytera, Hikvision, Dahua |
 | Consistency model | SEC (Strong Eventual Consistency) — AP under CAP |
 | Receipt algorithm | DSSE (Dead Simple Signing Envelope) |
@@ -392,7 +392,7 @@ Apache-2.0. See [LICENSE](LICENSE).
 
 ---
 
-© SZL Holdings · Doctrine v11 LOCKED (749/14/163, kernel `c7c0ba17`) · Λ = Conjecture 1 · SLSA L1+L2 honest · Section 889 = 5 vendors
+© SZL Holdings · Doctrine v11 LOCKED (749/14/163, kernel `c7c0ba17`) · Λ = Conjecture 1 · SLSA L1 honest · L2 verified-provenance on roadmap · Section 889 = 5 vendors
 
 
 </details>
@@ -405,4 +405,4 @@ Apache-2.0. See [LICENSE](LICENSE).
 
 Cite this work via [`CITATION.cff`](CITATION.cff). Math foundations: [szl-papers](https://github.com/szl-holdings/szl-papers) · [lutar-lean](https://github.com/szl-holdings/lutar-lean) (kernel `c7c0ba17`).
 
-<sub>Λ Conjecture 1 (not a theorem) · 749/14/163 v11 LOCKED (kernel `c7c0ba17`) · SLSA L1+L2 honest · Section 889 = 5 vendors · [SZL Holdings](https://a11oy.net) · Apache-2.0 code · CC-BY-4.0 papers</sub>
+<sub>Λ Conjecture 1 (not a theorem) · 749/14/163 v11 LOCKED (kernel `c7c0ba17`) · SLSA L1 honest · L2 verified-provenance on roadmap · Section 889 = 5 vendors · [SZL Holdings](https://a11oy.net) · Apache-2.0 code · CC-BY-4.0 papers</sub>
