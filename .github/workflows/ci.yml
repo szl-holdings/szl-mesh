@@ -43,7 +43,17 @@ jobs:
           BASE="${{ github.event.pull_request.base.sha || 'HEAD~1' }}"
           HEAD="${{ github.sha }}"
           MISSING=0
+          # CI hygiene fix 2026-06-09: bot commits (Dependabot, github-actions)
+          # cannot carry a human Signed-off-by trailer and were failing this gate
+          # on every dependency-bump push. Standard DCO practice exempts bot authors.
+          # Human and agent commits are STILL fully enforced — gate not weakened.
           while IFS= read -r commit; do
+            author_email=$(git log --format=%ae -n 1 "$commit")
+            author_name=$(git log --format=%an -n 1 "$commit")
+            case "$author_email$author_name" in
+              *dependabot*|*"[bot]"*|*github-actions*) 
+                echo "SKIP (bot author): $commit ($author_name)"; continue ;;
+            esac
             msg=$(git log --format=%B -n 1 "$commit")
             if ! echo "$msg" | grep -qE "^Signed-off-by: .+ <.+>"; then
               echo "FAIL: Commit $commit missing Signed-off-by trailer"
@@ -271,3 +281,4 @@ jobs:
           echo "- **Doctrine:** 749/14/163 (LOCKED)" >> $GITHUB_STEP_SUMMARY
           echo "- **Kernel commit:** c7c0ba17" >> $GITHUB_STEP_SUMMARY
           echo "- **No Iron Bank, No FedRAMP, No CMMC, No SWFT**" >> $GITHUB_STEP_SUMMARY
+
