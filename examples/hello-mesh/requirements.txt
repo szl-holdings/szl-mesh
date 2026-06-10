@@ -2,9 +2,9 @@
 # Install: pip install -r requirements.txt
 
 # gRPC runtime (for future stub calls)
-grpcio>=1.63.0
-grpcio-tools>=1.63.0
-protobuf>=5.26.0
+grpcio>=1.81.0
+grpcio-tools>=1.81.0
+protobuf>=6.33.5,<7.0.0
 
 # Ed25519 signing (production — replaces placeholder in hello_mesh.py)
-cryptography>=42.0.0
+cryptography>=48.0.0
