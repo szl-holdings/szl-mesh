@@ -4,7 +4,7 @@
 # gRPC runtime (for future stub calls)
 grpcio>=1.81.0
 grpcio-tools>=1.81.0
-protobuf>=7.35.0
+protobuf>=6.33.5,<7.0.0
 
 # Ed25519 signing (production — replaces placeholder in hello_mesh.py)
 cryptography>=48.0.0
