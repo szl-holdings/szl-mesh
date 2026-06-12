@@ -42,7 +42,7 @@ In two sentences: this component is part of SZL's governed-AI mesh — it enforc
 
 **Doctrine-pinned CRDT mesh layered on peat — 7 inventions beyond UDS Fleet**
 
-> **Doctrine:** v11 LOCKED `749/14/163` · Kernel commit `c7c0ba17` · Λ = Conjecture 1 (NOT theorem) · SLSA L1 honest · L2 verified-provenance on roadmap (NOT L3)  
+> **Doctrine:** v11 LOCKED `749/14/163` · Kernel commit `c7c0ba17` · locked-proven = 8 `{F1,F4,F7,F11,F12,F18,F19,F22}` · Λ = Conjecture 1 (NOT theorem) · SLSA L1 honest · L2 verified-provenance on roadmap (NOT L3)  
 > **Status:** Skeleton — Design complete, implementation in progress  
 > **Date:** 2026-06-02  
 > **Prepared by:** SZL Holdings Research (PhD Distributed Systems)
