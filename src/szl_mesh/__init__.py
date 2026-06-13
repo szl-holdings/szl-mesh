@@ -44,3 +44,25 @@ __all__ = [
 ]
 
 __version__ = "0.1.0"
+
+# ── Dev 2 lane: Khipu 3-of-4 quorum wiring (layered on Dev 1's ECDSA-P256 receipts).
+# Additive re-export; does not alter Dev 1's runtime surface above.
+from .quorum import (  # noqa: E402
+    propose_action,
+    verify_quorum,
+    action_hash,
+    QuorumCertificate,
+    QuorumVerification,
+    CorroborationLedger,
+    combined_classification,
+)
+
+__all__ += [
+    "propose_action",
+    "verify_quorum",
+    "action_hash",
+    "QuorumCertificate",
+    "QuorumVerification",
+    "CorroborationLedger",
+    "combined_classification",
+]
