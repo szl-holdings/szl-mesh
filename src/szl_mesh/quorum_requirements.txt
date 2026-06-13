@@ -1,0 +1,4 @@
+# szl_mesh.quorum runtime dependencies (Dev 2 lane).
+# The 3-of-4 Khipu quorum uses the REAL engine (do NOT vendor as source-of-truth — depend on it):
+#   pip install "khipu-consensus @ git+https://github.com/szl-holdings/khipu-consensus#subdirectory=python"
+cryptography>=42.0
