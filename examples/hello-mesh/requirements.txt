@@ -4,7 +4,9 @@
 # gRPC runtime (for future stub calls)
 grpcio>=1.81.1
 grpcio-tools>=1.81.1
-protobuf>=7.35.1,<8.0.0
+# grpcio-tools 1.81.1 requires protobuf>=6.33.5,<7.0.0; the prior >=7.35.1 pin was
+# unsatisfiable (pip ResolutionImpossible). Aligned to grpcio-tools' real range.
+protobuf>=6.33.5,<7.0.0
 
 # Ed25519 signing (production — replaces placeholder in hello_mesh.py)
 cryptography>=49.0.0
