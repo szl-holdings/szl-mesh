@@ -19,6 +19,13 @@ git commit -s -m "your message"
 
 Commits without a DCO trailer will be rejected by CI.
 
+**Remediation if a commit lands without a sign-off:** the DCO gate checks the
+commits in the current push (`HEAD~1..HEAD` on a push, the PR range on a PR), so
+an accidentally-unsigned commit on `main` is cleared by the **next signed-off
+commit** — no force-push or history rewrite is needed. Bot authors (Dependabot,
+`github-actions`, `[bot]`) are exempt by standard DCO practice; human and agent
+commits are always enforced.
+
 ## Development workflow
 
 ```bash
