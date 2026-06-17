@@ -1,0 +1,31 @@
+# Byte-compiled / optimized / cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Secrets / keys — NEVER commit (Doctrine v11)
+*.pem
+!PUBKEY_*.pem
+*.key
+.env
+.env.*
+.secret/
+.keys_DO_NOT_COMMIT.pem
+
+# Logs & temp
+*.log
+*.tmp
+.DS_Store
+
+# Build / dist
+build/
+dist/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
