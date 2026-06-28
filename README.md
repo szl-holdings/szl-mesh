@@ -406,3 +406,96 @@ Apache-2.0. See [LICENSE](LICENSE).
 Cite this work via [`CITATION.cff`](CITATION.cff). Math foundations: [szl-papers](https://github.com/szl-holdings/szl-papers) · [lutar-lean](https://github.com/szl-holdings/lutar-lean) (kernel `c7c0ba17`).
 
 <sub>Λ Conjecture 1 (not a theorem) · 749/14/163 v11 LOCKED (kernel `c7c0ba17`) · SLSA L1 honest · L2 verified-provenance on roadmap · Section 889 = 5 vendors · [SZL Holdings](https://a11oy.net) · Apache-2.0 code · CC-BY-4.0 papers</sub>
+
+## Sovereign Mesh HTTP API (`src/sovereign/api.py`)
+
+The `src/sovereign/api.py` module exposes the sovereign agent's join/dispatch over HTTP via
+FastAPI. It imports `szl_mesh_agent.py` and `szl_mesh_coordinator.py` from the same directory.
+
+### Routes
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/api/szl/v1/mesh/join` | Doctrine-gated node enrollment (HMAC-SHA256 proof) |
+| `GET` | `/api/szl/v1/mesh/nodes` | Live node registry (UP/DOWN/OFFLINE) |
+| `POST` | `/api/szl/v1/mesh/dispatch` | Λ advisory gate + F1 seeded dispatch → signed receipt |
+| `GET` | `/healthz` | Health check |
+
+### How to run
+
+```bash
+# Set formation key (32-byte hex secret)
+export SZL_FORMATION_KEY=$(python3 -c 'import secrets; print(secrets.token_hex(32))')
+
+# Start the server
+pip install fastapi uvicorn pydantic
+uvicorn src.sovereign.api:app --host 0.0.0.0 --port 9090
+```
+
+Or mount into an existing FastAPI app:
+```python
+from fastapi import FastAPI
+from src.sovereign.api import register
+
+app = FastAPI()
+register(app, ns="/api/szl/v1/mesh")
+```
+
+### Node enrollment example
+
+```bash
+# 1. Compute HMAC-SHA256 proof
+FORMATION_KEY="your-formation-key-hex"
+NODE_ID="my-gpu-node-01"
+TS=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+PROOF=$(python3 -c "
+import hmac, hashlib, sys
+k = bytes.fromhex('$FORMATION_KEY')
+m = ('$NODE_ID' + '$TS' + '749/14/163' + 'c7c0ba17').encode()
+print(hmac.new(k, m, hashlib.sha256).hexdigest())
+")
+
+# 2. POST join request
+curl -s -X POST http://localhost:9090/api/szl/v1/mesh/join \
+  -H "Content-Type: application/json" \
+  -d "{
+    "node_id": "$NODE_ID",
+    "hardware": {"name": "RTX-4060Ti", "vram_gb": 16, "backend": "CUDA", "arch": "Ada"},
+    "formation_key_proof": "$PROOF",
+    "timestamp_utc": "$TS"
+  }" | python3 -m json.tool
+```
+
+### Dispatch example (Λ advisory gate)
+
+```bash
+# Dispatch a job — lambda_score must be >= 0.5 (advisory Conjecture 1 threshold)
+curl -s -X POST http://localhost:9090/api/szl/v1/mesh/dispatch \
+  -H "Content-Type: application/json" \
+  -d '{
+    "request_id": "job-001",
+    "payload": {"task": "inference", "model": "SZL-Nemo"},
+    "lambda_score": 0.85
+  }' | python3 -m json.tool
+```
+
+### Honest labels
+
+Every response carries `honest_labels`:
+
+```json
+{
+  "mesh_type": "scheduler — software load-balancer, not hardware interconnect",
+  "vram_fusion": "ROADMAP — NVLink-only (consumer Ada/Blackwell have no NVLink)",
+  "lambda_label": "advisory Conjecture 1 — NEVER a theorem",
+  "throughput": "MODELED until founder reports MEASURED benchmark",
+  "join_token_signing": "HMAC-SHA256 classical — ML-DSA (FIPS 204) upgrade = ROADMAP",
+  "doctrine": "749/14/163",
+  "kernel_commit": "c7c0ba17"
+}
+```
+
+**Never claim:** mesh acceleration is hardware-level; VRAM is fused across nodes; Λ is a proven
+theorem; throughput numbers are measured. These are all labeled ROADMAP/MODELED/CONJECTURE by
+Doctrine v11.
+
