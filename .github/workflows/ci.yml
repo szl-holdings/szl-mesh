@@ -255,6 +255,33 @@ jobs:
           print(f"OK: SECTION_889_VENDORS = {vendors}")
           PYEOF
 
+  # ── PCGI Spine Test ──────────────────────────────────────────────
+  # Verifies the canonical szl-receipt fold (src/szl_mesh/spine.py, T302):
+  # a mesh state transition emits ONE szl-receipt binding subject + input
+  # digest + output/state digest + governing policy id + energy=UNAVAILABLE.
+  test-spine:
+    name: PCGI Spine (szl-receipt fold)
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: "3.11"
+
+      - name: Install package + canonical szl-receipt spine
+        run: |
+          pip install -e .
+          # Org convention (matches governed-inference-meter): install the
+          # canonical szl-receipt lib pinned to the v0.2.0 tag.
+          pip install "git+https://github.com/szl-holdings/szl-receipt.git@v0.2.0"
+          pip install "pytest>=7"
+
+      - name: Run spine test
+        run: |
+          python3 -m pytest tests/test_spine.py -q
+
   # ── SLSA L1 Provenance ──────────────────────────────────────────
   slsa-provenance:
     name: SLSA L1 Provenance

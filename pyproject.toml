@@ -10,6 +10,12 @@ requires-python = ">=3.10"
 license = { text = "Apache-2.0" }
 dependencies = ["cryptography>=41"]
 
+[project.optional-dependencies]
+# PCGI spine (T302): fold mesh state transitions onto the org-canonical
+# szl-receipt binding. Optional so the base runtime stays cryptography-only;
+# pinned the same >= way as the core cryptography dep.
+spine = ["szl-receipt>=0.2.0"]
+
 [project.scripts]
 szl-mesh-demo = "szl_mesh.demo:main"
 

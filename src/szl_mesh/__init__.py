@@ -66,3 +66,28 @@ __all__ += [
     "CorroborationLedger",
     "combined_classification",
 ]
+
+# ── PCGI spine (T302): fold mesh state transitions onto the org-canonical
+# szl-receipt emit_receipt binding. Additive re-export; the spine module imports
+# szl_receipt lazily, so importing szl_mesh never requires the optional lib.
+from .spine import (  # noqa: E402
+    SpineUnavailable,
+    build_mesh_receipt_body,
+    emit_mesh_receipt,
+    emit_mesh_receipt_from_dsse,
+    mesh_receipt_body_digest,
+    transition_input_digest,
+    transition_output_digest,
+    verify_mesh_receipt,
+)
+
+__all__ += [
+    "SpineUnavailable",
+    "build_mesh_receipt_body",
+    "emit_mesh_receipt",
+    "emit_mesh_receipt_from_dsse",
+    "mesh_receipt_body_digest",
+    "transition_input_digest",
+    "transition_output_digest",
+    "verify_mesh_receipt",
+]
