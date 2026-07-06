@@ -52,10 +52,11 @@ from pathlib import Path
 from typing import List, Tuple
 
 # ---------------------------------------------------------------------------
-# Path setup (allow running from repo root or code/ directory)
+# Path setup: the sovereign mesh modules live in src/sovereign/, so add that
+# directory to sys.path (mirrors the ../src pattern used by the other tests).
 # ---------------------------------------------------------------------------
 
-CODE_DIR = Path(__file__).parent
+CODE_DIR = Path(__file__).parent.parent / "src" / "sovereign"
 sys.path.insert(0, str(CODE_DIR))
 
 from szl_mesh_agent import (
