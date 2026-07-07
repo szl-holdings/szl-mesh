@@ -47,6 +47,13 @@ jobs:
           # cannot carry a human Signed-off-by trailer and were failing this gate
           # on every dependency-bump push. Standard DCO practice exempts bot authors.
           # Human and agent commits are STILL fully enforced — gate not weakened.
+          # CI hygiene fix 2026-07-07: --no-merges below excludes the ephemeral
+          # refs/pull/*/merge commit GitHub synthesizes for pull_request runs. That
+          # commit is CI-generated (committer GitHub <noreply@github.com>) and, like
+          # bot commits above, can never carry a human Signed-off-by — it was failing
+          # this gate on every human PR (github.sha = merge commit). Standard DCO
+          # practice (and the DCO GitHub App) ignore merge commits. Every real
+          # human/agent NON-merge commit is STILL fully enforced — gate not weakened.
           while IFS= read -r commit; do
             author_email=$(git log --format=%ae -n 1 "$commit")
             author_name=$(git log --format=%an -n 1 "$commit")
@@ -59,7 +66,7 @@ jobs:
               echo "FAIL: Commit $commit missing Signed-off-by trailer"
               MISSING=$((MISSING+1))
             fi
-          done < <(git log --format=%H "$BASE".."$HEAD")
+          done < <(git log --no-merges --format=%H "$BASE".."$HEAD")
           if [ "$MISSING" -gt 0 ]; then
             echo ""
             echo "Every commit must carry:"
