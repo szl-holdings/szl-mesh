@@ -285,35 +285,70 @@ def verify_quorum(qc, pubkeys: dict) -> QuorumVerification:
 
     Re-checks EVERY witness ECDSA-P256 signature over the DSSE PAE (via the
     engine's ``tally`` -> ``verify_verdict``) and confirms that >= ``threshold``
-    DISTINCT valid ``allow`` signatures are over the SAME ``action_hash``.
+    DISTINCT organs each contributed a valid ``allow`` signature over the SAME
+    ``action_hash``. Forged sigs, wrong-hash sigs, and ``block`` verdicts never
+    count.
 
-    Returns ``canonical: True`` iff that holds. Forged sigs, wrong-hash sigs,
-    ``block`` verdicts, and duplicate organs do NOT count toward quorum.
+    Quorum is counted by DISTINCT witness organ, not by raw signature, which is
+    robust in BOTH directions against a peer that submits duplicate organ
+    entries over the wire:
+
+      * inflation — the same organ's valid signature replayed twice cannot
+        count twice, so a Byzantine peer holding one key cannot manufacture a
+        quorum;
+      * deflation — a forged / non-counting duplicate of an organ cannot cancel
+        that organ's genuine counting signature, so an adversary cannot demote a
+        legitimate 3-of-4 quorum by front-running junk duplicate entries.
+
+    Malformed input is FAIL-CLOSED: a certificate that is not a
+    :class:`QuorumCertificate` / dict, or that lacks a usable string
+    ``action_hash``, returns ``canonical: False`` with ``consensus_count: 0`` —
+    never an exception and never a fabricated quorum. Witness entries that are
+    not dicts are ignored.
 
     ``qc`` may be a :class:`QuorumCertificate` or its ``to_dict()`` form.
     """
     if isinstance(qc, QuorumCertificate):
         qcd = qc.to_dict()
-    else:
+    elif isinstance(qc, dict):
         qcd = qc
-    ah = qcd["action_hash"]
-    threshold = int(qcd.get("threshold", DEFAULT_THRESHOLD))
-    n = int(qcd.get("n", DEFAULT_N))
+    else:
+        # Not a certificate at all — never fabricate a quorum; fail closed.
+        return QuorumVerification(
+            action_hash="", threshold=DEFAULT_THRESHOLD, n=DEFAULT_N,
+            consensus_count=0, canonical=False, checks=[],
+        )
 
-    # Build engine-shaped verdict dicts; dedupe by organ so a Byzantine peer can't
-    # inflate the count by submitting the same organ twice.
-    seen = set()
+    try:
+        threshold = int(qcd.get("threshold", DEFAULT_THRESHOLD))
+        n = int(qcd.get("n", DEFAULT_N))
+    except (TypeError, ValueError):
+        threshold, n = DEFAULT_THRESHOLD, DEFAULT_N
+
+    ah = qcd.get("action_hash")
+    if not isinstance(ah, str) or not ah:
+        # No action hash to bind witnesses to — cannot verify; fail closed.
+        return QuorumVerification(
+            action_hash="", threshold=threshold, n=n,
+            consensus_count=0, canonical=False, checks=[],
+        )
+
+    raw = qcd.get("witnesses")
+    if not isinstance(raw, list):
+        raw = []
+
+    # Present EVERY witness record to the REAL engine (including any duplicate
+    # organs). We intentionally do NOT drop entries before verification: doing so
+    # is exactly what would let a forged duplicate deflate an honest organ. The
+    # engine verifies each signature independently; we reduce to distinct
+    # counting organs afterwards.
     verdicts = []
-    for w in qcd.get("witnesses", []):
-        if w is None:
+    for w in raw:
+        if not isinstance(w, dict):
             continue
-        organ = w.get("organ")
-        if organ in seen:
-            continue
-        seen.add(organ)
         verdicts.append(
             {
-                "organ": organ,
+                "organ": w.get("organ"),
                 "keyid": w.get("keyid"),
                 "payloadType": w.get("payloadType", ORGAN_VERDICT_PAYLOAD_TYPE),
                 "payload": w.get("payload"),
@@ -323,12 +358,21 @@ def verify_quorum(qc, pubkeys: dict) -> QuorumVerification:
         )
 
     result: ConsensusResult = tally(ah, verdicts, pubkeys, threshold=threshold, n=n)
+
+    # Count DISTINCT organs that contributed a valid, counting (allow +
+    # same-hash) signature. Distinct-organ counting is what makes verification
+    # robust against both the inflation and deflation duplicate-organ cases.
+    counting_organs = {
+        c.organ for c in result.checks if c.counts and c.organ is not None
+    }
+    consensus_count = len(counting_organs)
+
     return QuorumVerification(
         action_hash=ah,
         threshold=threshold,
         n=n,
-        consensus_count=result.consensus_count,
-        canonical=(result.decision == "canonical"),
+        consensus_count=consensus_count,
+        canonical=consensus_count >= threshold,
         checks=result.checks,
     )
 
