@@ -221,6 +221,81 @@ def test_combined_classification_table():
     print("[PASS] receipt × corroboration classification table matches spec/04 §6")
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# 6. Duplicate-organ robustness — quorum counts DISTINCT valid organs, so a peer
+#    submitting duplicate organ entries can neither inflate nor deflate quorum.
+# ─────────────────────────────────────────────────────────────────────────────
+def test_quorum_deflation_forged_duplicate_cannot_demote():
+    """A forged duplicate of a genuine organ must NOT deflate a real 3-of-4.
+
+    Models a peer that front-runs a forged copy of an organ's record ahead of
+    that organ's genuine signature. Distinct-organ counting keeps the honest
+    quorum intact — a keep-first dedupe would have dropped the real entry and
+    demoted the 3-of-4 to a 2-of-4.
+    """
+    organs = list(Q.DEFAULT_ORGANS)
+    priv, pub = gen_keys(organs)
+    # Genuine 3-of-4: the 4th witness is offline/missing.
+    present = {o: priv[o] for o in organs[:3]}
+    qc = Q.propose_action("a1" * 32, witness_keys=present)
+    assert qc.canonical is True and qc.consensus_count == 3
+    d = qc.to_dict()
+    # Front-run a FORGED duplicate of the first organ ahead of its real record.
+    bad = "MEUCIQzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzAiEAzzzzzzzzz"
+    forged_dup = dict(d["witnesses"][0])
+    forged_dup["sig"] = bad
+    d["witnesses"].insert(0, forged_dup)
+    ver = Q.verify_quorum(d, pub)
+    assert ver.consensus_count == 3, "forged duplicate must not demote the real organ"
+    assert ver.canonical is True
+    print("[PASS] deflation: forged duplicate organ cannot demote a real 3-of-4")
+
+
+def test_quorum_inflation_replayed_sig_counts_once():
+    """One organ's valid signature replayed N times counts ONCE (no forgery).
+
+    A Byzantine peer holding a single witness key cannot manufacture a quorum by
+    duplicating its own valid record; distinct-organ counting caps it at 1.
+    """
+    organs = list(Q.DEFAULT_ORGANS)
+    priv, pub = gen_keys(organs)
+    qc = Q.propose_action("b2" * 32, witness_keys={organs[0]: priv[organs[0]]})
+    assert qc.consensus_count == 1 and qc.canonical is False
+    d = qc.to_dict()
+    only = d["witnesses"][0]
+    # Replay the SAME valid record three times.
+    d["witnesses"] = [dict(only), dict(only), dict(only)]
+    ver = Q.verify_quorum(d, pub)
+    assert ver.consensus_count == 1, "replayed single-key sig must count once"
+    assert ver.canonical is False, "one witness can never reach threshold 3"
+    print("[PASS] inflation: replayed single-organ signature counts once (<threshold)")
+
+
+def test_verify_quorum_malformed_input_fail_closed():
+    """Structurally invalid certificates are fail-closed: never raise, never
+    fabricate a quorum."""
+    organs = list(Q.DEFAULT_ORGANS)
+    _priv, pub = gen_keys(organs)
+    # Not a QuorumCertificate / dict.
+    for bad_qc in (None, "not-a-cert", 42, ["witnesses"]):
+        ver = Q.verify_quorum(bad_qc, pub)
+        assert ver.canonical is False and ver.consensus_count == 0
+    # Missing / empty / non-string action_hash.
+    for ah in (None, "", 123, {}):
+        ver = Q.verify_quorum({"action_hash": ah, "witnesses": []}, pub)
+        assert ver.canonical is False and ver.consensus_count == 0
+    # witnesses not a list — tolerated, fail-closed.
+    ver = Q.verify_quorum({"action_hash": "c" * 64, "witnesses": "nope"}, pub)
+    assert ver.canonical is False and ver.consensus_count == 0
+    # Non-dict witness entries are ignored; a dict without payload/sig cannot count.
+    ver = Q.verify_quorum(
+        {"action_hash": "c" * 64, "witnesses": [None, 7, "x", {"organ": "sentra"}]},
+        pub,
+    )
+    assert ver.canonical is False and ver.consensus_count == 0
+    print("[PASS] malformed certificate input is fail-closed (canonical=False, no raise)")
+
+
 ALL = [
     test_vectors_match,
     test_propose_and_verify_all_allow,
@@ -232,6 +307,9 @@ ALL = [
     test_corroboration_soft_safety_ap,
     test_corroboration_single_byzantine_cannot_corroborate,
     test_combined_classification_table,
+    test_quorum_deflation_forged_duplicate_cannot_demote,
+    test_quorum_inflation_replayed_sig_counts_once,
+    test_verify_quorum_malformed_input_fail_closed,
 ]
 
 
