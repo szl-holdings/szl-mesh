@@ -41,6 +41,7 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
+import os
 import random
 import secrets
 import threading
@@ -84,6 +85,49 @@ TILE_STATUS_DOWN = "DOWN"
 # Khipu BFT Conjecture-2 quorum threshold (3-of-4 nodes)
 BFT_QUORUM = 3
 BFT_POOL = 4
+
+
+# ---------------------------------------------------------------------------
+# Ouroboros bounded orchestration loop — doctrine: bounded, terminating,
+# receipt-closed. Cross-ref: szl-holdings/szl-router receipts + the local
+# runLoop pattern (LoopTrace: steps / maxBudget / exit / trace / doctrine /
+# receiptsInEqOut). Λ = Conjecture 1 (advisory, NEVER a theorem).
+#
+# The mesh serves a model split across nodes by contiguous layer ranges
+# (Petals/exo pattern — see assign_layers). Serving one request means walking
+# the ordered pipeline of layer-range stages and dispatching each stage through
+# the governed scheduler. That walk is the mesh orchestration loop;
+# MeshCoordinator.run_pipeline() makes it explicitly BOUNDED so it always
+# terminates and every stage is receipt-closed.
+# ---------------------------------------------------------------------------
+
+LOOP_DOCTRINE = "bounded, terminating, receipt-closed"
+
+# Safe default HARD cap on orchestration steps when SZL_MESH_LOOP_BUDGET is
+# unset or invalid. Comfortably exceeds a normal pipeline depth (one stage per
+# layer-range node) while never permitting an unbounded walk.
+DEFAULT_LOOP_BUDGET = 8
+
+# Absolute ceiling — even an explicit env override is clamped to this, so the
+# loop can never be made effectively unbounded by misconfiguration.
+MAX_LOOP_BUDGET = 1024
+
+
+def _loop_budget() -> int:
+    """
+    Resolve the HARD orchestration step budget.
+
+    Order: SZL_MESH_LOOP_BUDGET env (int >= 1) -> DEFAULT_LOOP_BUDGET.
+    Always clamped to [1, MAX_LOOP_BUDGET]. Never returns an unbounded value.
+    """
+    raw = os.environ.get("SZL_MESH_LOOP_BUDGET", "")
+    try:
+        val = int(raw)
+    except (TypeError, ValueError):
+        return DEFAULT_LOOP_BUDGET
+    if val < 1:
+        return DEFAULT_LOOP_BUDGET
+    return min(val, MAX_LOOP_BUDGET)
 
 
 # ---------------------------------------------------------------------------
@@ -602,6 +646,193 @@ class MeshCoordinator:
             "lambda_label": "advisory-conjecture-1",
             "routing_receipt": receipt_entry,
             "strategy": "least-connections+F1-seeded",
+            "label": "LIVE",
+            "vram_fusion": "ROADMAP",
+        }
+
+    # ------------------------------------------------------------------
+    # Ouroboros bounded orchestration loop (pipeline walk)
+    # ------------------------------------------------------------------
+
+    def _pipeline_plan(self) -> Tuple[List[NodeTile], bool]:
+        """
+        Compute the ordered pipeline of UP tiles covering the model's layer
+        span [0, total_layers) via a greedy interval cover.
+
+        Returns (stages, covered):
+          - stages:  ordered NodeTiles forming the pipeline (may be partial).
+          - covered: True iff the stages cover the full layer span. When False
+                     there is a genuine gap — the pipeline is INCOMPLETE and
+                     the caller must surface that honestly (never fabricate a
+                     missing stage).
+
+        Terminating: `remaining` strictly shrinks each iteration, so the walk
+        runs at most len(up) times; an explicit `guard` makes the bound obvious.
+        """
+        with self._lock:
+            up = [t for t in self._tiles.values() if t.status == TILE_STATUS_UP]
+        up.sort(key=lambda t: (t.layer_start, t.layer_end))
+        stages: List[NodeTile] = []
+        remaining = list(up)
+        cursor = 0
+        guard = len(up) + 1   # HARD bound — the plan walk can never exceed this
+        while cursor < self.total_layers and guard > 0:
+            guard -= 1
+            reachable = [
+                t for t in remaining
+                if t.layer_start <= cursor and t.layer_end > cursor
+            ]
+            if not reachable:
+                return stages, False   # honest gap: cannot cover [cursor, ...]
+            best = max(reachable, key=lambda t: t.layer_end)
+            stages.append(best)
+            cursor = best.layer_end
+            remaining = [t for t in remaining if t is not best]
+        return stages, cursor >= self.total_layers
+
+    def run_pipeline(
+        self,
+        request: dict,
+        max_steps: Optional[int] = None,
+    ) -> Tuple[bool, dict]:
+        """
+        Bounded Ouroboros orchestration loop around dispatch().
+
+        Walks the model's layer-range pipeline (see _pipeline_plan) and issues
+        ONE governed dispatch per stage. The loop is bounded by a HARD step
+        budget (max_steps arg, else SZL_MESH_LOOP_BUDGET env, else
+        DEFAULT_LOOP_BUDGET), so it always terminates. Every stage emits its own
+        F4/F22 routing receipt, so the loop is receipt-closed.
+
+        Doctrine: bounded, terminating, receipt-closed (cross-ref
+        szl-holdings/szl-router receipts + local runLoop). Λ stays Conjecture 1
+        (advisory, NEVER a theorem).
+
+        Honest exit — NEVER faked:
+          - "converged"        every pipeline stage dispatched and the layer
+                               span is fully covered.
+          - "budget_exhausted" the HARD step budget was hit before the pipeline
+                               finished.
+          - "degraded"         a required stage had no UP node (coverage gap)
+                               or a dispatch degraded/was rejected — the walk
+                               stops honestly rather than fabricate a stage.
+          - "error"            an exception was raised inside the loop.
+
+        Back-compatible: additive method. Existing dispatch() is unchanged;
+        callers that never invoke run_pipeline() see identical behavior.
+
+        Returns (converged, result). result always carries an additive `loop`
+        block: {steps, maxBudget, exit, trace, doctrine, receiptsInEqOut,
+        lambda_label} plus `stages` (the per-stage dispatch results).
+        """
+        budget = (
+            max_steps
+            if (isinstance(max_steps, int) and max_steps >= 1)
+            else _loop_budget()
+        )
+        budget = min(budget, MAX_LOOP_BUDGET)
+        base_request_id = request.get("request_id") or secrets.token_hex(8)
+
+        stages_plan, covered = self._pipeline_plan()
+        trace: List[dict] = []
+        stage_results: List[dict] = []
+        step = 0
+        exit_reason: str = "error"   # honest default until the loop sets it
+
+        trace.append({
+            "n": 0,
+            "type": "system",
+            "label": (
+                f"plan: {len(stages_plan)} pipeline stage(s), "
+                f"coverage={'full' if covered else 'INCOMPLETE'}, "
+                f"budget={budget} (HARD cap)"
+            ),
+        })
+
+        try:
+            for stage_idx, tile in enumerate(stages_plan):
+                if step >= budget:
+                    exit_reason = "budget_exhausted"
+                    trace.append({
+                        "n": step,
+                        "type": "error",
+                        "label": (
+                            f"HARD budget {budget} reached before pipeline "
+                            f"complete ({stage_idx}/{len(stages_plan)} stages)"
+                        ),
+                    })
+                    break
+                step += 1
+                stage_request = dict(request)
+                stage_request["request_id"] = f"{base_request_id}::stage{step}"
+                ok, res = self.dispatch(stage_request)
+                stage_results.append(res)
+                if not ok:
+                    exit_reason = "degraded"
+                    trace.append({
+                        "n": step,
+                        "type": "error",
+                        "label": (
+                            f"stage {step}/{len(stages_plan)} not dispatched: "
+                            f"{res.get('reason', 'rejected')}"
+                        ),
+                    })
+                    break
+                trace.append({
+                    "n": step,
+                    "type": "action",
+                    "label": (
+                        f"stage {step}/{len(stages_plan)} -> "
+                        f"{res.get('node_name')} (Λ={res.get('lambda_score')}, "
+                        f"layers {tile.layer_start}-{tile.layer_end}, chain="
+                        f"{res.get('routing_receipt', {}).get('chain_hash', '')[:8]})"
+                    ),
+                })
+            else:
+                # loop completed without break
+                exit_reason = "converged" if (stages_plan and covered) else "degraded"
+        except Exception as exc:   # honest: surface, never swallow into a fake win
+            exit_reason = "error"
+            trace.append({
+                "n": step,
+                "type": "error",
+                "label": f"orchestration error: {exc!r}",
+            })
+            log.warning("run_pipeline error (base=%s): %r", base_request_id, exc)
+
+        converged = exit_reason == "converged"
+        trace.append({
+            "n": step,
+            "type": "success" if converged else "output",
+            "label": f"exit={exit_reason} after {step} step(s)",
+        })
+
+        loop_block = {
+            "steps": step,
+            "maxBudget": budget,
+            "exit": exit_reason,
+            "trace": trace,
+            "doctrine": LOOP_DOCTRINE,
+            # DOCTRINE label (not math): one governed dispatch in == one routing
+            # receipt out per stage. Cross-ref local runLoop receiptsInEqOut.
+            "receiptsInEqOut": True,
+            "lambda_label": "advisory Conjecture 1 — NEVER a theorem",
+        }
+
+        log.info(
+            "run_pipeline: base=%s exit=%s steps=%d/%d stages_planned=%d covered=%s",
+            base_request_id, exit_reason, step, budget,
+            len(stages_plan), covered,
+        )
+
+        return converged, {
+            "converged": converged,
+            "request_id": base_request_id,
+            "stages": stage_results,
+            "stage_count": len(stage_results),
+            "pipeline_covered": covered,
+            "loop": loop_block,
+            "strategy": "bounded-ouroboros-pipeline",
             "label": "LIVE",
             "vram_fusion": "ROADMAP",
         }
