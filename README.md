@@ -19,7 +19,7 @@ It brings always-converging shared state and Byzantine-fault-tolerant agreement 
 
 ## ▶️ Live demo
 
-_Internal / private repository — no public demo surface. See [docs.szlholdings.com](https://szl-holdings.github.io/docs-site) for the public product walkthrough._
+This is a **public** repository. As a coordination/CRDT mesh layer it has no standalone hosted demo — run it locally via the Quick start below, or see [docs.szlholdings.com](https://szl-holdings.github.io/docs-site) for the public product walkthrough.
 
 ## ⚡ Quick start (30 seconds)
 
