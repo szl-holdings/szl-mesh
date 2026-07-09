@@ -499,3 +499,32 @@ Every response carries `honest_labels`:
 theorem; throughput numbers are measured. These are all labeled ROADMAP/MODELED/CONJECTURE by
 Doctrine v11.
 
+---
+
+## The Ouroboros loop (doctrine cross-reference)
+
+szl-mesh does **not** implement the estate's Ouroboros bounded-recursion kernel — it is a
+CRDT coordination substrate, not a recursion engine. This section is a **doctrine
+cross-reference** plus an honest note on how the mesh's real flow *relates* to the loop.
+
+The canonical definition is the receipt-closed kernel
+[`szl-holdings/ouroboros` → `src/loop-kernel.ts`](https://github.com/szl-holdings/ouroboros/blob/main/src/loop-kernel.ts) (`runLoop`): *bounded recursion with measurable convergence* that MUST terminate on one
+of four exit conditions — `converged | consistent | aborted | budgetExhausted` — and emits a
+governance receipt for every run. **The trace is the product.**
+
+How the mesh *relates* to (does not equal) that primitive:
+
+- **Receipt-closed transitions.** `src/szl_mesh/spine.py` folds every mesh state transition
+  onto the org-canonical `szl-receipt`, binding `subject / input_digest / output_digest /
+  policy_id / energy` in one record. That `input_digest → output_digest` binding is the
+  mesh's concrete instance of `receipts.in ≡ receipts.out` — the loop's identity as a
+  **metaphor (doctrine, not math)**, not a proof of correctness.
+- **Bounded, terminating flow.** The coordinator (`src/sovereign/szl_mesh_coordinator.py`)
+  dispatches *only* Λ-passed work with F1 replay determinism, and the CRDT layer converges
+  under Strong Eventual Consistency (AP under CAP). There is no unbounded recursion; the
+  receipt log is append-only (F22 emit-monotone, F4 khipu hash-chain).
+
+**Honesty (Doctrine v11 · 749/14/163):** Λ (the dispatch gate) is **Conjecture 1** —
+advisory, *never* a proven theorem. Khipu BFT is **Conjecture 2**. `energy` is the literal
+`"UNAVAILABLE"` sentinel — the mesh measures no joules and fabricates none, so this flow
+makes **no** perpetual-motion or zero-cost claim.
