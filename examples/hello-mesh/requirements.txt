@@ -2,8 +2,8 @@
 # Install: pip install -r requirements.txt
 
 # gRPC runtime (for future stub calls)
-grpcio>=1.82.0
-grpcio-tools>=1.82.0
+grpcio>=1.82.1
+grpcio-tools>=1.82.1
 # grpcio-tools 1.81.1 (latest stable) requires protobuf>=7.35.1,<8.0.0 (verified on
 # PyPI). The prior >=7.35.1,<8.0.0 pin conflicted with that range, so pip raised
 # ResolutionImpossible. Aligned to grpcio-tools 1.81.1's actual protobuf requirement.
