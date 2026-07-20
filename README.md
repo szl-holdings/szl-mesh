@@ -11,6 +11,8 @@
 
 **Deployment story:** [szl-fleet-overlay](https://github.com/szl-holdings/szl-fleet-overlay) (UDS Operator packages) · [uds-bundles](https://github.com/szl-holdings/uds-bundles) (bundle manifests) · [szl-uds-deployment](https://github.com/szl-holdings/szl-uds-deployment) (air-gap deploy)
 
+**Canonical status:** `szl-mesh` is the **active** repo for ongoing UDS mesh / CRDT-coordination work. It supersedes the OTel-schema layer formerly declared canonical in the now-archived [`szl-otel-mesh`](https://github.com/szl-holdings/szl-otel-mesh) (ADR-0001, 2026-06-03); see the amendment note in that repo's [`CANONICAL.md`](https://github.com/szl-holdings/szl-otel-mesh/blob/main/CANONICAL.md).
+
 </div>
 
 ## 💡 Why it matters
