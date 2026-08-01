@@ -8,7 +8,7 @@ version = "0.1.0"
 description = "SZL-MESH node runtime: convergent CRDT + two-track state + doctrine-pinned DSSE receipts + doctrine-gated enrollment. Doctrine v11 LOCKED 749/14/163 @ c7c0ba17."
 requires-python = ">=3.10"
 license = { text = "Apache-2.0" }
-dependencies = ["cryptography>=41"]
+dependencies = ["cryptography>=49.0.0"]
 
 [project.optional-dependencies]
 # PCGI spine (T302): fold mesh state transitions onto the org-canonical
