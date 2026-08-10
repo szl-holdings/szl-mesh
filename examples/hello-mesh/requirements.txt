@@ -10,4 +10,4 @@ grpcio-tools>=1.83.0
 protobuf>=7.35.1,<8.0.0
 
 # Ed25519 signing (production — replaces placeholder in hello_mesh.py)
-cryptography>=49.0.0
+cryptography>=50.0.0
