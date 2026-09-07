@@ -8,23 +8,18 @@ Thank you for contributing to the SZL mesh CRDT layer.
 - Familiarity with Automerge CRDTs and DSSE signing
 - Read [`SZL_FLEET_OVERLAY_DESIGN.md`](https://github.com/szl-holdings/szl-fleet-overlay/blob/main/SZL_FLEET_OVERLAY_DESIGN.md) for mesh architecture context
 
-## DCO Sign-off (Required)
+## Solo-maintainer provenance policy
 
-Every commit requires a Developer Certificate of Origin sign-off:
+Developer Certificate of Origin trailers are **not required**. SZL-MESH is operated as a solo-maintainer repository, so redundant `Signed-off-by:` enforcement has been removed from CI.
 
-```bash
-git commit -s -m "your message"
-# Adds: Signed-off-by: Your Name <you@example.com>
-```
+Every change still follows the auditable repository path:
 
-Commits without a DCO trailer will be rejected by CI.
+1. Create a focused branch.
+2. Open a pull request against `main`.
+3. Pass the repository's tests, security analysis, doctrine, dependency, and container gates.
+4. Resolve review findings and merge through GitHub so the author, exact head, checks, and resulting commit remain recorded.
 
-**Remediation if a commit lands without a sign-off:** the DCO gate checks the
-commits in the current push (`HEAD~1..HEAD` on a push, the PR range on a PR), so
-an accidentally-unsigned commit on `main` is cleared by the **next signed-off
-commit** — no force-push or history rewrite is needed. Bot authors (Dependabot,
-`github-actions`, `[bot]`) are exempt by standard DCO practice; human and agent
-commits are always enforced.
+By submitting a contribution, the contributor confirms that they have the right to provide it under this repository's Apache-2.0 license. A `git commit -s` trailer is optional and is not used as a merge gate.
 
 ## Development workflow
 
@@ -55,9 +50,4 @@ See [SECURITY.md](SECURITY.md) for vulnerability disclosure.
 
 ## License
 
-Apache-2.0. All contributions accepted under the same license.
-
----
-
-Signed-off-by: Yachay <yachay@szlholdings.ai>  
-Co-Authored-By: Perplexity Computer Agent <agent@perplexity.ai>
+Apache-2.0. All contributions are accepted under the same license.

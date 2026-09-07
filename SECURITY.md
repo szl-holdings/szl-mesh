@@ -15,7 +15,7 @@ SZL-MESH is an **early-stage protocol skeleton**. The following is our honest, u
 | SLSA Level | **L1** | Provenance assertions generated at build time (not L3, not L2, L1 honest). |
 | Ed25519 signatures | Design-complete | Node identity and CRDT op signing — not yet implemented |
 | DSSE receipt spec | Design-complete | See `spec/01-dsse-receipts.md` — not yet implemented |
-| DCO sign-off | Active | Every commit carries `Signed-off-by` trailer |
+| Repository provenance | Active | GitHub-authenticated authorship, protected history, exact-head CI, and merge records; DCO trailers are optional and are not a gate. |
 | Transport encryption | TLS 1.3 via QUIC | Inherited from peat / Iroh QUIC |
 
 ### What We Do NOT Have
@@ -44,7 +44,7 @@ Hardware attestation checks are best-effort during enrollment; physical deployme
 
 ## Responsible Disclosure
 
-SZL-MESH is a private-source protocol. If you discover a security vulnerability:
+SZL-MESH is maintained in a public repository. If you discover a security vulnerability:
 
 1. **Do not open a public GitHub issue.**
 2. Email `security@szlholdings.ai` with:
