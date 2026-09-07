@@ -1,0 +1,68 @@
+name: Apply mesh receipt-order successor
+
+on:
+  push:
+    branches:
+      - fix/mesh-receipt-order-and-pytest9-20260907
+    paths:
+      - .github/workflows/apply-mesh-receipt-order-fix.yml
+
+permissions:
+  contents: write
+
+concurrency:
+  group: apply-mesh-receipt-order-fix
+  cancel-in-progress: false
+
+jobs:
+  apply-and-qualify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Harden runner
+        uses: step-security/harden-runner@05e31511f85b41b11d1cf0ef85d0992719546e2c # v2.21.0
+        with:
+          egress-policy: audit
+
+      - name: Check out exact owner branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: fix/mesh-receipt-order-and-pytest9-20260907
+          fetch-depth: 1
+
+      - name: Set up exact Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12.10"
+
+      - name: Apply fail-closed source transformation
+        run: python tools/apply_mesh_receipt_order_fix.py
+
+      - name: Install and test the exact candidate
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check --requirement requirements-mesh-command-dev.txt
+          python -I -P -m py_compile mesh_command/app.py
+          python -m pytest -q tests/test_mesh_command.py
+          docker build --file Dockerfile.mesh-command --tag szl-mesh-command:receipt-order .
+          git diff --check
+
+      - name: Commit only the durable successor
+        env:
+          BRANCH: fix/mesh-receipt-order-and-pytest9-20260907
+        run: |
+          set -euo pipefail
+          git rm tools/apply_mesh_receipt_order_fix.py
+          git rm .github/workflows/apply-mesh-receipt-order-fix.yml
+          git add \
+            mesh_command/app.py \
+            tests/test_mesh_command.py \
+            requirements-mesh-command-dev.txt \
+            Dockerfile.mesh-command
+          git config user.name "SZL Frontier Operator"
+          git config user.email "stephenlutar2@gmail.com"
+          git commit \
+            -m "fix(mesh): make convergence receipts arrival-order independent" \
+            -m "Canonicalize clock-pair ordering and identical-record node ties, carry pytest 9.0.3, and copy only the runtime package into the non-root image." \
+            -m "Signed-off-by: Stephen P. Lutar <stephenlutar2@gmail.com>"
+          git push origin "HEAD:${BRANCH}"
