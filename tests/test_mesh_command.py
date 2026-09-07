@@ -84,6 +84,46 @@ def test_deterministic_writer_tiebreak_is_explicit() -> None:
     assert payload["conflicts"][0]["resolution"] == "DETERMINISTIC_LWW_REGISTER"
 
 
+def test_identical_register_tie_is_node_stable() -> None:
+    identical = {
+        "snapshots": [
+            {
+                "node_id": "alpha",
+                "clock": {"values": {"alpha": 1}},
+                "registers": [
+                    {
+                        "key": "mission.mode",
+                        "value": "observe",
+                        "logical_time": 1,
+                        "writer": "operator",
+                        "tombstone": False,
+                    }
+                ],
+            },
+            {
+                "node_id": "bravo",
+                "clock": {"values": {"bravo": 1}},
+                "registers": [
+                    {
+                        "key": "mission.mode",
+                        "value": "observe",
+                        "logical_time": 1,
+                        "writer": "operator",
+                        "tombstone": False,
+                    }
+                ],
+            },
+        ],
+        "include_tombstones": False,
+    }
+    first = client.post("/api/simulate/merge", json=identical).json()
+    identical["snapshots"].reverse()
+    second = client.post("/api/simulate/merge", json=identical).json()
+    assert first["registers"] == second["registers"]
+    assert first["registers"][0]["selected_from_node"] == "bravo"
+    assert first["receipt"]["output_digest"] == second["receipt"]["output_digest"]
+
+
 def test_duplicate_snapshot_nodes_fail_closed() -> None:
     invalid = json.loads(json.dumps(SAMPLE))
     invalid["snapshots"][1]["node_id"] = "alpha"

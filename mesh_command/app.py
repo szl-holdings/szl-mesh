@@ -160,7 +160,9 @@ def merge_snapshots(request: MergeRequest) -> dict[str, Any]:
     conflicts: list[dict[str, Any]] = []
     for key in sorted(grouped):
         candidates = grouped[key]
-        winner_node, winner = max(candidates, key=lambda item: winner_key(item[1]))
+        winner_node, winner = max(
+            candidates, key=lambda item: (*winner_key(item[1]), item[0])
+        )
         distinct = {digest(record.model_dump(mode="json")) for _, record in candidates}
         if len(distinct) > 1:
             conflicts.append(
