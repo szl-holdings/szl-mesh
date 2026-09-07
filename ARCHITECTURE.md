@@ -42,10 +42,13 @@ szl-mesh/
   verifiable receipt onto the Khipu DAG (`receipts.in ≡ receipts.out`).
 - **Seven inventions beyond UDS Fleet** — documented in the README technical section.
 
-## CI gates (required on `main`)
+## CI gates on `main`
 
-`DCO` · `Scorecard analysis workflow`. Doctrine + overclaim guards and pin-check also
-run. PRs are required to `main`.
+Proto validation, markdown/doctrine checks, executable smoke tests, the canonical
+receipt-spine test, supply-chain analysis, and SLSA L1 provenance run through GitHub.
+Repository attribution is preserved by authenticated authorship, pull-request history,
+exact-head checks, and immutable merge records. DCO and `Signed-off-by` trailers are
+not required. PRs remain the normal admission path to `main`.
 
 Public product walkthrough: [docs.szlholdings.com](https://szl-holdings.github.io/docs-site).
 
