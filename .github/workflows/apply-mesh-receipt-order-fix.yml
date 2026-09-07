@@ -6,6 +6,7 @@ on:
       - fix/mesh-receipt-order-and-pytest9-20260907
     paths:
       - .github/workflows/apply-mesh-receipt-order-fix.yml
+      - tools/apply_mesh_receipt_order_fix.py
 
 permissions:
   contents: write
