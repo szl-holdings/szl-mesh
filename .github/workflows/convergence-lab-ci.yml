@@ -1,0 +1,113 @@
+name: Mesh Convergence Lab CI
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "lab/**"
+      - ".github/workflows/convergence-lab-ci.yml"
+  push:
+    branches: [main]
+    paths:
+      - "lab/**"
+      - ".github/workflows/convergence-lab-ci.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  convergence-lab:
+    name: convergence-lab/finite-read-only-contract
+    runs-on: ubuntu-24.04
+    timeout-minutes: 18
+    steps:
+      - name: Harden runner
+        uses: step-security/harden-runner@05e31511f85b41b11d1cf0ef85d0992719546e2c # v2.21.0
+        with:
+          egress-policy: audit
+
+      - name: Checkout exact candidate
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+
+      - name: Set up exact Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12.10"
+          cache: pip
+          cache-dependency-path: |
+            pyproject.toml
+            lab/constraints.txt
+            lab/requirements.txt
+            lab/requirements-dev.txt
+
+      - name: Install constrained dependencies
+        run: |
+          python -m pip install --disable-pip-version-check \
+            --constraint lab/constraints.txt \
+            --editable . \
+            --requirement lab/requirements.txt \
+            --requirement lab/requirements-dev.txt
+
+      - name: Prove finite convergence contract
+        run: |
+          python -m compileall -q src lab
+          pytest -q lab/tests
+
+      - name: Prove local-only frontend and narrow authority
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          frontend = "\n".join(
+              Path(path).read_text(encoding="utf-8")
+              for path in (
+                  "lab/static/index.html",
+                  "lab/static/app.js",
+                  "lab/static/styles.css",
+                  "lab/static/responsive.css",
+              )
+          )
+          frontend = frontend.replace("http://www.w3.org/2000/svg", "")
+          forbidden_frontend = (
+              "http://",
+              "https://",
+              "localStorage",
+              "sessionStorage",
+              "document.cookie",
+              "eval(",
+          )
+          found = [value for value in forbidden_frontend if value in frontend]
+          if found:
+              raise SystemExit(f"forbidden frontend authority: {found}")
+
+          source = "\n".join(
+              Path(path).read_text(encoding="utf-8")
+              for path in ("lab/app.py", "lab/simulator.py")
+          )
+          forbidden_backend = (
+              "subprocess",
+              "os.system",
+              "socket.",
+              "requests.",
+              "urllib.request",
+              "httpx.",
+              "kubernetes",
+          )
+          present = [value for value in forbidden_backend if value in source]
+          if present:
+              raise SystemExit(f"forbidden backend authority: {present}")
+          required = (
+              '"byzantine_fault_tolerance_claimed": False',
+              '"network_or_repository_mutation": False',
+              '"dsse_signatures_verified": False',
+              '"transport_exercised": False',
+          )
+          missing = [value for value in required if value not in source]
+          if missing:
+              raise SystemExit(f"evidence boundaries missing: {missing}")
+          print("frontend and authority boundary: PASS")
+          PY
+          git diff --check
