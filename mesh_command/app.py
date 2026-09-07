@@ -20,7 +20,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
-APP_VERSION = "1.0.0"
+APP_VERSION = "1.0.1"
 SCHEMA = "szl.mesh-convergence-receipt/v1"
 MAX_NODES = 64
 MAX_CLOCK_ENTRIES = 64
@@ -146,8 +146,13 @@ def winner_key(record: Register) -> tuple[int, str, str, bool]:
 
 
 def merge_snapshots(request: MergeRequest) -> dict[str, Any]:
+    # Normalize the replica set before any derived output is assembled. This
+    # makes candidate ordering, selected source nodes, clock-relation orientation,
+    # and the output receipt independent of request arrival order.
+    snapshots = sorted(request.snapshots, key=lambda snapshot: snapshot.node_id)
+
     grouped: dict[str, list[tuple[str, Register]]] = defaultdict(list)
-    for snapshot in request.snapshots:
+    for snapshot in snapshots:
         for register in snapshot.registers:
             grouped[register.key].append((snapshot.node_id, register))
 
@@ -178,8 +183,8 @@ def merge_snapshots(request: MergeRequest) -> dict[str, Any]:
             )
 
     clock_relations: list[dict[str, str]] = []
-    for index, left in enumerate(request.snapshots):
-        for right in request.snapshots[index + 1 :]:
+    for index, left in enumerate(snapshots):
+        for right in snapshots[index + 1 :]:
             clock_relations.append(
                 {
                     "left": left.node_id,
@@ -191,8 +196,8 @@ def merge_snapshots(request: MergeRequest) -> dict[str, Any]:
     body = {
         "schema": SCHEMA,
         "algorithm": "deterministic-lww-register-v1",
-        "nodes": sorted(snapshot.node_id for snapshot in request.snapshots),
-        "merged_clock": merge_clock(request.snapshots),
+        "nodes": [snapshot.node_id for snapshot in snapshots],
+        "merged_clock": merge_clock(snapshots),
         "registers": registers,
         "conflicts": conflicts,
         "clock_relations": clock_relations,
