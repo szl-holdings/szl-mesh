@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark light">
+  <meta name="description" content="Finite, deterministic CRDT convergence experiments over the SZL Mesh runtime.">
+  <title>SZL Mesh · Convergence Lab</title>
+  <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="/responsive.css">
+  <script src="/app.js" defer></script>
+</head>
+<body>
+  <a class="skip" href="#main">Skip to convergence lab</a>
+  <header class="topbar">
+    <a class="brand" href="#main" aria-label="SZL Mesh Convergence Lab home">
+      <span class="brand-mark" aria-hidden="true">M</span>
+      <span><strong>SZL Mesh</strong><small>Convergence Lab</small></span>
+    </a>
+    <div id="service-state" class="service-state" role="status" aria-live="polite">Reading source</div>
+  </header>
+
+  <main id="main">
+    <section class="hero" aria-labelledby="hero-title">
+      <div class="hero-copy">
+        <p class="eyebrow">DETERMINISTIC · PARTITION-AWARE · TWO-TRACK</p>
+        <h1 id="hero-title">Watch state<br><span>find agreement.</span></h1>
+        <p class="lede">Finite experiments over the repository's real LWW-map CRDT. Different arrival orders, one operation set, explicit authorized and observed views.</p>
+        <div class="truth-strip" aria-label="Evidence boundary">
+          <span>NO NETWORK</span><span>NO ENROLLMENT</span><span>NO BFT CLAIM</span><span>NO MUTATION</span>
+        </div>
+      </div>
+      <div class="mesh-stage" aria-label="Replica mesh visualization">
+        <svg id="mesh-svg" viewBox="0 0 640 420" role="img" aria-label="Replica topology"></svg>
+        <div class="stage-core"><span>CRDT</span><small>set union</small></div>
+      </div>
+    </section>
+
+    <section class="metrics" aria-label="Latest simulation metrics">
+      <article><strong id="metric-replicas">—</strong><span>replicas</span></article>
+      <article><strong id="metric-ops">—</strong><span>unique ops</span></article>
+      <article><strong id="metric-heads">—</strong><span>winning heads</span></article>
+      <article><strong id="metric-state">IDLE</strong><span>scenario state</span></article>
+    </section>
+
+    <section class="console" aria-labelledby="console-title">
+      <div class="control-panel">
+        <div class="section-head">
+          <div><p class="eyebrow">SCENARIO INPUT</p><h2 id="console-title">Partition theatre</h2></div>
+          <span id="source-revision" class="mono">source unavailable</span>
+        </div>
+
+        <div class="form-row">
+          <label for="scenario-select">Preset</label>
+          <select id="scenario-select"></select>
+          <button id="load-preset" type="button">Load preset</button>
+        </div>
+        <div class="form-row compact">
+          <label for="doc-id">Document</label>
+          <input id="doc-id" value="signal-grid" maxlength="96" autocomplete="off">
+          <label for="replicas">Replicas</label>
+          <input id="replicas" type="number" min="2" max="8" value="4">
+        </div>
+        <label for="operations">Operations</label>
+        <textarea id="operations" spellcheck="false" aria-describedby="input-note">[]</textarea>
+        <p id="input-note" class="note">Maximum 64 operations and 8 replicas. Tracks are scenario inputs, not independently verified authorization.</p>
+        <button id="simulate" class="primary" type="button">Reconcile scenario</button>
+      </div>
+
+      <div class="evidence-panel">
+        <div class="section-head">
+          <div><p class="eyebrow">RECEIPT CHAIN</p><h2>Convergence evidence</h2></div>
+          <span id="receipt" class="mono">receipt unavailable</span>
+        </div>
+        <div id="checks" class="checks" aria-live="polite"></div>
+        <div class="views">
+          <article><h3>Authorized view</h3><pre id="authorized-view" tabindex="0">Awaiting a scenario.</pre></article>
+          <article><h3>Observed view</h3><pre id="observed-view" tabindex="0">Awaiting a scenario.</pre></article>
+        </div>
+      </div>
+    </section>
+
+    <section class="ledger" aria-labelledby="ledger-title">
+      <div class="section-head">
+        <div><p class="eyebrow">REPLICA READBACK</p><h2 id="ledger-title">Final state ledger</h2></div>
+        <span class="mono">same set ≠ same arrival order</span>
+      </div>
+      <div id="replica-grid" class="replica-grid"></div>
+    </section>
+  </main>
+
+  <footer>
+    <span>SZL Holdings · Mesh source authority</span>
+    <span>SCENARIO CONVERGENCE ≠ NETWORK PROOF ≠ BFT</span>
+  </footer>
+  <noscript>JavaScript is required for the interactive theatre. The bounded API remains available at /api/docs.</noscript>
+</body>
+</html>
