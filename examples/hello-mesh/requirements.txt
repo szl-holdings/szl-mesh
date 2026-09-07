@@ -2,12 +2,12 @@
 # Install: pip install -r requirements.txt
 
 # gRPC runtime (for future stub calls)
-grpcio>=1.83.0
-grpcio-tools>=1.83.0
-# grpcio-tools 1.81.1 (latest stable) requires protobuf>=7.36.0,<8.0.0 (verified on
+grpcio>=1.83.1
+grpcio-tools>=1.83.1
+# grpcio-tools 1.81.1 (latest stable) requires protobuf>=7.36.1,<8.0.0 (verified on
 # PyPI). The prior >=7.35.1,<8.0.0 pin conflicted with that range, so pip raised
 # ResolutionImpossible. Aligned to grpcio-tools 1.81.1's actual protobuf requirement.
-protobuf>=7.36.0,<8.0.0
+protobuf>=7.36.1,<8.0.0
 
 # Ed25519 signing (production — replaces placeholder in hello_mesh.py)
-cryptography>=50.0.0
+cryptography>=50.0.1
