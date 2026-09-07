@@ -1,0 +1,48 @@
+@media (max-width: 1000px) {
+  .hero { grid-template-columns: 1fr; }
+  .mesh-stage { width: min(720px, 100%); margin: 0 auto; }
+  .console { grid-template-columns: 1fr; }
+}
+@media (max-width: 720px) {
+  main { width: min(100% - 1rem, 1500px); }
+  .hero { min-height: auto; padding: 4rem .4rem; }
+  .metrics { grid-template-columns: repeat(2, 1fr); }
+  .metrics article:nth-child(2) { border-right: 0; }
+  .metrics article:nth-child(-n+2) { border-bottom: 1px solid var(--line); }
+  .form-row, .form-row.compact { grid-template-columns: 1fr; align-items: stretch; }
+  .checks, .views { grid-template-columns: 1fr; }
+  .section-head { align-items: flex-start; flex-direction: column; }
+  textarea { min-height: 320px; }
+}
+@media (max-width: 460px) {
+  .topbar { padding: .7rem; }
+  .brand small { display: none; }
+  h1 { font-size: clamp(3rem, 17vw, 5.4rem); }
+  .truth-strip span { font-size: .58rem; }
+  .mesh-stage { border-radius: 18px; }
+  .stage-core { width: 82px; }
+  .metrics article { min-height: 94px; }
+  .control-panel, .evidence-panel { padding: .85rem; }
+  footer { flex-direction: column; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; transition-duration: .001ms !important; }
+}
+@media (prefers-contrast: more) {
+  :root { --line: rgba(255,255,255,.66); --muted: #dce8f5; }
+}
+@media (forced-colors: active) {
+  * { box-shadow: none !important; filter: none !important; }
+  .mesh-stage, .metrics, .control-panel, .evidence-panel, .replica-card, input, select, textarea, button, pre { border: 1px solid CanvasText; }
+  .node-body, .node-halo, .mesh-link { stroke: CanvasText; }
+}
+@media print {
+  body { color: #000; background: #fff; }
+  body::before, .topbar, .mesh-stage, button { display: none; }
+  main { width: 100%; }
+  .hero { min-height: auto; padding: 1rem 0; }
+  h1 span { color: #000; -webkit-text-stroke: 0; }
+  .metrics, .control-panel, .evidence-panel, .replica-card, pre { color: #000; background: #fff; border-color: #777; break-inside: avoid; }
+  .console { grid-template-columns: 1fr; padding: 1rem 0; }
+  textarea { min-height: 180px; }
+}
