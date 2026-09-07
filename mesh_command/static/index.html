@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="color-scheme" content="dark light">
+  <meta name="description" content="Deterministic disconnected-state convergence for SZL Mesh.">
+  <title>SZL Mesh Command</title>
+  <link rel="stylesheet" href="/static/styles.css">
+  <script src="/static/app.js" defer></script>
+</head>
+<body>
+  <a class="skip" href="#main">Skip to content</a>
+  <header>
+    <a class="brand" href="/" aria-label="SZL Mesh Command home"><span aria-hidden="true">⌁</span><strong>SZL</strong> Mesh</a>
+    <div id="runtime" class="runtime" role="status" aria-live="polite">SOURCE · CHECKING</div>
+  </header>
+
+  <main id="main">
+    <section class="hero">
+      <div>
+        <p class="eyebrow">DISCONNECTED OPERATIONS · DETERMINISTIC CONVERGENCE</p>
+        <h1>State survives<br><i>the silence.</i></h1>
+        <p class="lede">A source-bound CRDT observatory for reasoning about partitions, vector clocks, deterministic merge results, and approval boundaries without opening a radio, socket, command, or deployment path.</p>
+        <div class="actions">
+          <button id="run-demo" class="primary" type="button">Run convergence proof</button>
+          <a href="/api/docs">API contract</a>
+        </div>
+      </div>
+      <div class="mesh-orb" aria-hidden="true">
+        <span class="node n1"></span><span class="node n2"></span><span class="node n3"></span><span class="node n4"></span>
+        <i class="link l1"></i><i class="link l2"></i><i class="link l3"></i><i class="link l4"></i>
+        <b>MERGE</b>
+      </div>
+    </section>
+
+    <section class="stats" aria-label="Mesh evidence summary">
+      <article><span>Nodes</span><strong id="node-count">—</strong></article>
+      <article><span>Links available</span><strong id="link-count">—</strong></article>
+      <article><span>Conflicts</span><strong id="conflict-count">—</strong></article>
+      <article><span>Output receipt</span><strong id="receipt-short">—</strong></article>
+    </section>
+
+    <section class="grid">
+      <article class="panel topology-panel">
+        <div class="panel-head"><div><p class="eyebrow">DECLARED TOPOLOGY</p><h2>Partition field</h2></div><button id="refresh" type="button">Refresh</button></div>
+        <div id="topology" class="topology" role="list" aria-live="polite"></div>
+      </article>
+
+      <article class="panel receipt-panel">
+        <div class="panel-head"><div><p class="eyebrow">CONVERGENCE RECEIPT</p><h2>Exact output</h2></div><span id="merge-state" class="pill">NOT RUN</span></div>
+        <div id="receipt" class="receipt empty">Run the deterministic proof to inspect merged clocks, selected registers, conflicts, and the committed output digest.</div>
+      </article>
+    </section>
+
+    <section class="panel lab">
+      <div class="panel-head"><div><p class="eyebrow">OPERATOR-SUPPLIED STATE</p><h2>Merge laboratory</h2></div><button id="reset" type="button">Reset sample</button></div>
+      <div class="lab-grid">
+        <label><span>Disconnected snapshots</span><textarea id="snapshots" spellcheck="false"></textarea></label>
+        <div>
+          <p class="label">Result</p>
+          <pre id="output" tabindex="0">Waiting for a bounded merge.</pre>
+        </div>
+      </div>
+    </section>
+
+    <section class="principles">
+      <article><small>01</small><h3>Source bound</h3><p>Every response separates declared demo topology, operator-supplied state, source revision, and measured local computation.</p></article>
+      <article><small>02</small><h3>Arrival independent</h3><p>Logical time, writer identity, and content digest produce a deterministic LWW-register result instead of trusting transport order.</p></article>
+      <article><small>03</small><h3>No hidden effectors</h3><p>The service cannot discover peers, open sockets, transmit state, execute commands, or mutate a deployment.</p></article>
+    </section>
+  </main>
+
+  <footer><span>SZL Holdings · Mesh capability surface</span><span id="revision">revision unavailable</span></footer>
+</body>
+</html>
