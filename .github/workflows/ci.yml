@@ -1,17 +1,17 @@
 # .github/workflows/ci.yml — SZL-MESH CI
 #
 # Jobs:
-#   lint-proto     — protoc syntax check on all .proto files
-#   lint-markdown  — markdownlint on spec/ and README
-#   test-hello     — smoke-run examples/hello-mesh/hello_mesh.py
-#   dco-check      — verify DCO Signed-off-by trailers on commits
+#   lint-proto       — protoc syntax check on all .proto files
+#   lint-markdown    — markdownlint on spec/ and README
+#   test-hello       — smoke-run examples/hello-mesh/hello_mesh.py
+#   test-spine       — canonical szl-receipt fold tests
+#   slsa-provenance  — build provenance on main
 #
 # Doctrine: v11 LOCKED 749/14/163 · Kernel commit c7c0ba17 · SLSA L1
 # SLSA L1: provenance generated via actions/attest-build-provenance
-#
-# DCO:
-#   Signed-off-by: Yachay <yachay@szlholdings.ai>
-#   Co-Authored-By: Perplexity Computer Agent <agent@perplexity.ai>
+# Solo-maintainer provenance is supplied by GitHub-authenticated authorship,
+# pull-request history, exact-head checks, and the immutable merge record.
+# DCO and Signed-off-by trailers are not required.
 
 name: CI
 
@@ -27,55 +27,6 @@ permissions:
   attestations: write  # required for actions/attest-build-provenance
 
 jobs:
-  # ── DCO Check ────────────────────────────────────────────────────
-  dco-check:
-    name: DCO Trailers
-    runs-on: ubuntu-22.04
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          fetch-depth: 0
-
-      - name: Check DCO Signed-off-by trailers
-        run: |
-          set -euo pipefail
-          # For each commit in the PR/push, verify Signed-off-by is present
-          BASE="${{ github.event.pull_request.base.sha || 'HEAD~1' }}"
-          HEAD="${{ github.sha }}"
-          MISSING=0
-          # CI hygiene fix 2026-06-09: bot commits (Dependabot, github-actions)
-          # cannot carry a human Signed-off-by trailer and were failing this gate
-          # on every dependency-bump push. Standard DCO practice exempts bot authors.
-          # Human and agent commits are STILL fully enforced — gate not weakened.
-          # CI hygiene fix 2026-07-07: --no-merges below excludes the ephemeral
-          # refs/pull/*/merge commit GitHub synthesizes for pull_request runs. That
-          # commit is CI-generated (committer GitHub <noreply@github.com>) and, like
-          # bot commits above, can never carry a human Signed-off-by — it was failing
-          # this gate on every human PR (github.sha = merge commit). Standard DCO
-          # practice (and the DCO GitHub App) ignore merge commits. Every real
-          # human/agent NON-merge commit is STILL fully enforced — gate not weakened.
-          while IFS= read -r commit; do
-            author_email=$(git log --format=%ae -n 1 "$commit")
-            author_name=$(git log --format=%an -n 1 "$commit")
-            case "$author_email$author_name" in
-              *dependabot*|*"[bot]"*|*github-actions*) 
-                echo "SKIP (bot author): $commit ($author_name)"; continue ;;
-            esac
-            msg=$(git log --format=%B -n 1 "$commit")
-            if ! echo "$msg" | grep -qE "^Signed-off-by: .+ <.+>"; then
-              echo "FAIL: Commit $commit missing Signed-off-by trailer"
-              MISSING=$((MISSING+1))
-            fi
-          done < <(git log --no-merges --format=%H "$BASE".."$HEAD")
-          if [ "$MISSING" -gt 0 ]; then
-            echo ""
-            echo "Every commit must carry:"
-            echo "  Signed-off-by: Yachay <yachay@szlholdings.ai>"
-            echo "  Co-Authored-By: Perplexity Computer Agent <agent@perplexity.ai>"
-            exit 1
-          fi
-          echo "All commits have DCO trailers."
-
   # ── Proto Lint ───────────────────────────────────────────────────
   lint-proto:
     name: Proto Lint
@@ -315,4 +266,3 @@ jobs:
           echo "- **Doctrine:** 749/14/163 (LOCKED)" >> $GITHUB_STEP_SUMMARY
           echo "- **Kernel commit:** c7c0ba17" >> $GITHUB_STEP_SUMMARY
           echo "- **No Iron Bank, No FedRAMP, No CMMC, No SWFT**" >> $GITHUB_STEP_SUMMARY
-
