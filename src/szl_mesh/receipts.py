@@ -137,6 +137,11 @@ def build_dsse_receipt(
     Wrap a StateTransitionStatement in a DSSE envelope and sign the PAE
     with ECDSA-P256-SHA256. Produces a REAL, re-verifiable signature.
     """
+    pub = private_key.public_key()
+    signer_node_id = node_id_from_pubkey(pub)
+    if stmt.get("node_id") != signer_node_id:
+        raise ValueError("statement node_id does not match signing public key")
+
     stmt_json = json.dumps(stmt, separators=(",", ":"), sort_keys=True).encode("utf-8")
     payload_b64 = _b64url_encode(stmt_json)
     signing_input = pae(PAYLOAD_TYPE, stmt_json)
@@ -144,7 +149,7 @@ def build_dsse_receipt(
     # ECDSA-P256 over SHA-256(signing_input) — DER-encoded signature.
     sig = private_key.sign(signing_input, ec.ECDSA(hashes.SHA256()))
 
-    pub_der = private_key.public_key().public_bytes(
+    pub_der = pub.public_bytes(
         encoding=serialization.Encoding.DER,
         format=serialization.PublicFormat.SubjectPublicKeyInfo,
     )
@@ -153,7 +158,7 @@ def build_dsse_receipt(
         "payload": payload_b64,
         "signatures": [
             {
-                "keyid": stmt["node_id"],
+                "keyid": signer_node_id,
                 "sig": _b64url_encode(sig),
                 "sig_alg": "ECDSA-P256-SHA256",
                 "sig_encoding": _B64,
@@ -170,23 +175,38 @@ def decode_statement(receipt: Dict[str, Any]) -> Dict[str, Any]:
 def verify_receipt_signature(receipt: Dict[str, Any]) -> bool:
     """
     Re-verify the ECDSA-P256-SHA256 signature over the PAE using the public
-    key embedded in the envelope. Returns True iff the signature is valid.
+    key embedded in the envelope. The embedded key must also bind exactly to
+    both signatures[0].keyid and the statement node_id. Returns True only if
+    the signature and signer identity are self-consistent.
     """
     try:
-        sig_entry = receipt["signatures"][0]
+        signatures = receipt["signatures"]
+        if not isinstance(signatures, list) or len(signatures) != 1:
+            return False
+        sig_entry = signatures[0]
         if sig_entry.get("sig_alg") != "ECDSA-P256-SHA256":
             return False
         payload_b64 = receipt["payload"]
         stmt_json = _b64url_decode(payload_b64)
+        stmt = json.loads(stmt_json.decode("utf-8"))
+        if not isinstance(stmt, dict):
+            return False
         signing_input = pae(receipt["payloadType"], stmt_json)
         pub_der = _b64url_decode(sig_entry["public_key_der"])
         pub = serialization.load_der_public_key(pub_der)
         if not isinstance(pub, ec.EllipticCurvePublicKey):
             return False
+        if not isinstance(pub.curve, ec.SECP256R1):
+            return False
+        signer_node_id = node_id_from_pubkey(pub)
+        if sig_entry.get("keyid") != signer_node_id:
+            return False
+        if stmt.get("node_id") != signer_node_id:
+            return False
         sig = _b64url_decode(sig_entry["sig"])
         pub.verify(sig, signing_input, ec.ECDSA(hashes.SHA256()))
         return True
-    except (InvalidSignature, KeyError, ValueError, TypeError):
+    except (InvalidSignature, KeyError, ValueError, TypeError, UnicodeDecodeError, json.JSONDecodeError):
         return False
 
 
@@ -239,7 +259,7 @@ def validate_receipt(
     if list(vendors) != list(SECTION_889_VENDORS):
         return GateResult(OBSERVED, RECEIPT_BAD_VENDORS, stmt)
 
-    # 6-7. signature
+    # 6-7. signature and signer identity binding
     if not verify_receipt_signature(receipt):
         return GateResult(OBSERVED, RECEIPT_BAD_SIGNATURE, stmt)
 
