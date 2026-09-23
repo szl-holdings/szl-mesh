@@ -119,8 +119,12 @@ def test_tamper_breaks_output_rebind():
 
 
 def test_fold_from_existing_dsse_receipt():
-    stmt, _ch, _node_id = _statement()
-    priv, _node = rcpt.generate_node_keypair()
+    raw = b'{"k":"v"}'
+    ch = hashlib.sha256(raw).hexdigest()
+    priv, node_id = rcpt.generate_node_keypair()
+    stmt = rcpt.build_state_transition_statement(
+        DOC, ch, [], [ch], node_id, "PLATFORM_STATUS"
+    )
     dsse = rcpt.build_dsse_receipt(stmt, priv)
     # The existing DSSE receipt still verifies (additive — path untouched).
     assert rcpt.verify_receipt_signature(dsse) is True
