@@ -16,6 +16,9 @@
 name: CI
 
 on:
+  merge_group:
+    types: [checks_requested]
+    branches: [main]
   push:
     branches: ["main", "develop"]
   pull_request:
