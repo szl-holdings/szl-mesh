@@ -82,7 +82,7 @@ def _require_szl_receipt():
         raise SpineUnavailable(
             "szl_receipt (v0.2.0) is not installed; install the optional extra "
             "`pip install 'szl-mesh[spine]'` (or "
-            "`pip install szl-receipt>=0.2.0`) to emit canonical mesh receipts. "
+            "`pip install szl-receipt-dsse>=0.3.1`) to emit canonical mesh receipts. "
             "Refusing to duplicate the shared receipt shapes."
         ) from exc
     return szl_receipt
