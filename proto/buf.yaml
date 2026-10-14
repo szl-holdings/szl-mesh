@@ -1,0 +1,30 @@
+# buf lint configuration for the published szl-mesh wire contract.
+#
+# Runs the full DEFAULT rule set. The exceptions below are scoped to rules
+# whose only fix is a breaking rename or move of the already-published
+# contract (enum value names, service names, RPC message types, file
+# layout). Each one changes the generated API and/or the JSON wire names,
+# so they need a versioned v2 migration, not a lint fix. Every other
+# DEFAULT rule (field/message/enum casing, zero values, imports, package
+# version suffix, file naming, etc.) is enforced and blocks CI.
+version: v2
+lint:
+  use:
+    - DEFAULT
+  except:
+    # Enum values are unprefixed (e.g. AUTHORIZED, RECEIPT_VALID). Prefixing
+    # renames every value in generated code and in proto3 JSON.
+    - ENUM_VALUE_PREFIX
+    # SzlMeshNode / ReceiptGate are the published gRPC service names; adding
+    # "Service" changes the /package.Service/Method route.
+    - SERVICE_SUFFIX
+    # GetPlatformsRequest/Response are deliberately shared by the three
+    # two-track queries (AUTHORIZED / OBSERVED / REVOKED).
+    - RPC_REQUEST_RESPONSE_UNIQUE
+    - RPC_REQUEST_STANDARD_NAME
+    - RPC_RESPONSE_STANDARD_NAME
+    # Both packages live flat in proto/ and szl_mesh.proto imports
+    # "szl_receipt.proto" by that path; the SLSA provenance step attests
+    # proto/szl_mesh.proto and proto/szl_receipt.proto at those paths.
+    - PACKAGE_DIRECTORY_MATCH
+    - DIRECTORY_SAME_PACKAGE

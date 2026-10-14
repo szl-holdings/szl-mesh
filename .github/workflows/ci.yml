@@ -56,35 +56,44 @@ jobs:
           buf --version
 
       - name: Lint proto files with buf
-        run: |
-          cd proto
-          # Create minimal buf config for standalone lint
-          cat > buf.yaml << 'EOF'
-          version: v2
-          lint:
-            use:
-              - STANDARD
-            except:
-              - PACKAGE_VERSION_SUFFIX
-          EOF
-          buf lint
-        continue-on-error: true   # non-blocking until buf.yaml tuned to project
-
-      - name: Verify protoc can parse all .proto files
+        # Blocking. Rule set and the scoped, documented exceptions live in
+        # proto/buf.yaml (committed), not in an inline heredoc.
         run: |
           set -euo pipefail
-          # Basic syntax check — protoc will error on syntax errors
-          for f in proto/*.proto; do
-            echo "Checking $f ..."
-            protoc --proto_path=proto \
-                   --descriptor_set_out=/dev/null \
-                   "$f" \
-              || { echo "FAIL: $f has syntax errors"; exit 1; }
-          done
-          echo "All .proto files parsed successfully."
-        # Note: google/protobuf/timestamp.proto requires well-known types
-        # This step is informational until the WKT include path is configured
-        continue-on-error: true
+          cd proto
+          buf lint
+
+      - name: Verify protoc can parse all .proto files
+        # Blocking. The protoc release zip ships the well-known types
+        # (google/protobuf/timestamp.proto) under /usr/local/include.
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          files=(proto/*.proto)
+          if [ "${#files[@]}" -eq 0 ]; then
+            echo "FAIL: no .proto files found under proto/"; exit 1
+          fi
+          protoc --proto_path=proto \
+                 --proto_path=/usr/local/include \
+                 --descriptor_set_out=/dev/null \
+                 "${files[@]}"
+          echo "All ${#files[@]} .proto files parsed successfully."
+
+      - name: Negative fixture - protoc must reject an invalid schema
+        # Proves the parse gate above can fail: protoc must exit non-zero
+        # on tests/fixtures/proto_invalid/broken_schema.proto.
+        run: |
+          set -uo pipefail
+          FIXTURE=tests/fixtures/proto_invalid/broken_schema.proto
+          test -f "$FIXTURE" || { echo "FAIL: missing $FIXTURE"; exit 1; }
+          if protoc --proto_path=tests/fixtures/proto_invalid \
+                    --proto_path=/usr/local/include \
+                    --descriptor_set_out=/dev/null \
+                    "$FIXTURE"; then
+            echo "FAIL: protoc accepted the invalid fixture; the parse gate is not enforcing"
+            exit 1
+          fi
+          echo "OK: protoc rejected the invalid fixture as expected."
 
   # ── Markdown Lint ────────────────────────────────────────────────
   lint-markdown:
@@ -100,8 +109,7 @@ jobs:
         run: |
           markdownlint \
             --config .markdownlint.json \
-            README.md SECURITY.md spec/*.md examples/**/*.md \
-            || true   # advisory — not blocking until config tuned
+            README.md SECURITY.md spec/*.md examples/**/*.md
 
       - name: Check doctrine version string consistency
         run: |

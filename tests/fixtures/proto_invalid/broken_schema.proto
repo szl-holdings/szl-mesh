@@ -1,0 +1,15 @@
+// Intentionally INVALID schema: negative fixture for the CI protoc gate.
+// CI asserts that protoc REJECTS this file. If protoc ever accepts it,
+// the "Proto Lint" job fails, which proves the parse gate can fail.
+// Do not "fix" this file and do not place it under proto/.
+
+syntax = "proto3";
+
+package szl.mesh.fixture.v1;
+
+message BrokenReceipt {
+  // Missing semicolon after the field number.
+  string receipt_id = 1
+  // Reference to a type that is never defined or imported.
+  UndefinedDigest digest = 2;
+}
