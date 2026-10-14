@@ -8,9 +8,11 @@
 
 ## 1. Motivation
 
-Peat signs each CRDT operation with the originating node's Ed25519 key. This provides integrity: every change has a provable author. What peat does NOT provide is **governance authority**: proof that a specific change was authorized under a specific locked governance doctrine.
+Peat signs each CRDT operation with the originating node's Ed25519 key. This provides integrity: every change has a provable author. What peat does NOT provide is **governance authority**: proof that
+a specific change was authorized under a specific locked governance doctrine.
 
-SZL-MESH adds a DSSE (Dead Simple Signing Envelope) receipt to every Automerge change that crosses a policy boundary. The receipt is the cryptographic link between a CRDT state transition and the governance doctrine that authorized it.
+SZL-MESH adds a DSSE (Dead Simple Signing Envelope) receipt to every Automerge change that crosses a policy boundary. The receipt is the cryptographic link between a CRDT state transition and the
+governance doctrine that authorized it.
 
 ---
 
@@ -33,7 +35,7 @@ SZL-MESH receipts follow the [DSSE specification](https://github.com/secure-syst
 
 The PAE (Pre-Authentication Encoding) follows DSSE §3:
 
-```
+```text
 PAE(type, body) = "DSSEv1" + SP + LEN(type) + SP + type + SP + LEN(body) + SP + body
 ```
 
@@ -97,7 +99,7 @@ The `payload` field (base64url-decoded) is a JSON `StateTransitionStatement`:
 
 Receipt Gate validation (pseudocode):
 
-```
+```text
 function validate_receipt(dsse_envelope, automerge_change_chunk, receiving_node_time):
   1. Parse DSSE envelope; extract payloadType, payload, signatures[0]
   2. Assert payloadType == "application/vnd.szl.mesh.state-transition+json"
@@ -129,7 +131,7 @@ Any assertion failure downgrades the change to OBSERVED; the CRDT change is **ne
 
 Receipts are stored alongside the CRDT change in the peat persistence layer. Each node maintains a local receipt ledger:
 
-```
+```text
 receipt_ledger/
   <change_hash>.dsse.json   — the DSSE envelope
   <change_hash>.change      — the raw Automerge change chunk
@@ -141,7 +143,8 @@ The `GetReceiptLedger` gRPC RPC (see `proto/szl_mesh.proto`) exposes recent rece
 
 ## 7. Wire Encoding
 
-When propagating CRDT changes over the mesh, SZL-MESH nodes attach the DSSE receipt as a metadata field in the peat wire protocol extension. Vanilla peat nodes see only the CRDT change (no receipt metadata); they are backwards-compatible and the change appears as OBSERVED at SZL-MESH nodes.
+When propagating CRDT changes over the mesh, SZL-MESH nodes attach the DSSE receipt as a metadata field in the peat wire protocol extension. Vanilla peat nodes see only the CRDT change
+(no receipt metadata); they are backwards-compatible and the change appears as OBSERVED at SZL-MESH nodes.
 
 ---
 

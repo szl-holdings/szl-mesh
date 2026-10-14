@@ -10,7 +10,7 @@
 
 Peat achieves 93–99% bandwidth reduction vs. flat gossip (O(n²)) through a tree of cells where state flows upward:
 
-```
+```text
 Squad cell  →  Platoon aggregator  →  Company hub  →  Command post
              (level 1 agg)           (level 2 agg)     (root)
 ```
@@ -21,9 +21,10 @@ Every state change — regardless of content or authority — traverses all inte
 
 ## 2. SZL-MESH Skip-Layer Routing
 
-SZL-MESH introduces **receipt-priority skip-layer routing**: an AUTHORIZED state change (carrying a valid DSSE receipt) can bypass intermediate aggregation levels and propagate directly to the command hub.
+SZL-MESH introduces **receipt-priority skip-layer routing**: an AUTHORIZED state change (carrying a valid DSSE receipt) can bypass intermediate aggregation levels and propagate directly to the command
+hub.
 
-```
+```text
 Without skip-layer (peat baseline):
   Squad ─→ Platoon ─→ Company ─→ Command    3 hops
 
@@ -54,13 +55,14 @@ Aggregators implement the priority queue at the Iroh QUIC connection level using
 ## 4. Asymptotic Analysis
 
 Let:
+
 - `N` = total nodes in formation
 - `r` = fraction of changes that carry valid receipts (0 ≤ r ≤ 1)
 - `h` = tree depth = O(log N)
 
 Message complexity:
 
-```
+```text
 Peat baseline:
   T_peat(N) = O(N · h) = O(N log N)   for ALL changes
 
@@ -72,16 +74,19 @@ SZL-MESH:
 ```
 
 Limits:
+
 - r = 0 (all OBSERVED, e.g., pure peat formation): `T_total = O(N log N)` — identical to peat, no degradation
 - r = 1 (all SZL-MESH nodes, all receipted): `T_total = O(N)` — linear message complexity
 - r = 0.8 (typical mixed formation): `T_total ≈ 0.8·O(N) + 0.2·O(N log N)` — significant improvement
 
 > **⚠ Λ = Conjecture 1 (NOT theorem):** The claim that AUTHORIZED changes achieve O(N) message complexity via skip-layer routing is a **design-time conjecture**. It has not been:
+>
 > - Formally proved in the distributed systems sense
 > - Empirically validated on a live formation under DDIL conditions
 > - Peer-reviewed
 >
-> This must not be presented as a proven theorem. The claim is plausible from first principles and has not appeared in peat documentation or academic literature we have found, representing a potential SZL novel contribution pending validation.
+> This must not be presented as a proven theorem. The claim is plausible from first principles and has not appeared in peat documentation or academic literature we have found, representing a potential
+> SZL novel contribution pending validation.
 
 ---
 
@@ -89,7 +94,7 @@ Limits:
 
 Each SZL-MESH aggregator maintains:
 
-```
+```text
 struct SkipLayerAggregator {
   // Local cell (children)
   cell_nodes: Vec<NodeId>,
@@ -111,7 +116,7 @@ struct SkipLayerAggregator {
 
 On receiving a change from a child node:
 
-```
+```text
 1. Check receipt_cache for change_hash → use cached track if present
 2. If not cached: call Receipt Gate (spec/01) → assign AUTHORIZED or OBSERVED
 3. If AUTHORIZED + P0/P1: enqueue to p0/p1_queue → forward to command_hub
@@ -123,7 +128,7 @@ On receiving a change from a child node:
 
 ## 6. Hierarchical Consistency Envelope
 
-```
+```text
 Level               Consistency       Receipt Gate              Skip-Layer?
 ──────────────────────────────────────────────────────────────────────────
 Squad cell          SEC (<1s)         OBSERVED only             No

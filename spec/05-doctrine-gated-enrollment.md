@@ -9,6 +9,7 @@
 ## 1. Peat's Enrollment Model
 
 Peat enrollment requires:
+
 1. Node generates Ed25519 keypair
 2. Node computes `NodeID = SHA-256(pubkey)`
 3. Node submits CSR to peat-gateway with `HMAC-SHA256(formation_key, NodeID || timestamp)`
@@ -42,7 +43,7 @@ SZL-MESH extends the enrollment CSR with three additional mandatory claims:
 
 The `doctrine_claim` fields are included in the HMAC proof:
 
-```
+```text
 formation_key_proof = HMAC-SHA256(
   key = formation_key,
   message = node_id || timestamp_utc || doctrine_version || kernel_commit
@@ -57,7 +58,7 @@ This cryptographically binds the doctrine claim to the enrollment proof — the 
 
 When a SZL-MESH peat-gateway instance receives an enrollment request:
 
-```
+```text
 1. Verify formation_key_proof (existing peat step)
 2. Assert timestamp_utc is within ±5 minutes of gateway UTC clock
 3. Assert doctrine_claim.doctrine_version == "749/14/163"       ← NEW
@@ -77,13 +78,14 @@ Steps 3–7 are new SZL-MESH additions. A failure at any step rejects enrollment
 
 ## 4. Certificate Authority Hierarchy
 
-```
+```text
 SZL Root CA (offline, air-gapped, Ed25519)
   └── SZL Formation CA (online per-formation, Ed25519, issued by Root CA)
         └── Node Certificates (Ed25519, 90-day TTL, issued by Formation CA)
 ```
 
-The Root CA private key is kept offline. Formation CAs are generated during pre-deployment ceremonies and shipped in the Zarf component alongside the formation key. The Formation CA certificate is verified against the Root CA by all nodes at startup.
+The Root CA private key is kept offline. Formation CAs are generated during pre-deployment ceremonies and shipped in the Zarf component alongside the formation key. The Formation CA certificate is
+verified against the Root CA by all nodes at startup.
 
 ---
 
@@ -105,7 +107,7 @@ This encodes the governance lifecycle in the cryptographic enrollment proof with
 
 Section 889 of the FY2019 NDAA prohibits use of telecommunications equipment from exactly 5 covered vendors:
 
-```
+```text
 1. Huawei Technologies Co., Ltd.
 2. ZTE Corporation
 3. Hytera Communications Corporation Limited
@@ -114,6 +116,7 @@ Section 889 of the FY2019 NDAA prohibits use of telecommunications equipment fro
 ```
 
 SZL-MESH checks the enrollment CSR's `section_889_attestation`:
+
 - If `hardware_vendor` matches any of the 5 vendors, enrollment is rejected with reason `SECTION_889_VIOLATION`
 - If `attestation_method == "none"`, the attestation is logged but enrollment proceeds (physical deployment layer controls assumed)
 - If `attestation_method == "tpm_quote"` (future capability), the TPM quote is verified against a trusted endorsement key

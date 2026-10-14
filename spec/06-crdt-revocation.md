@@ -8,7 +8,8 @@
 
 ## 1. Motivation
 
-Peat relies on certificate TTL (90-day expiry) for de-facto revocation. In air-gapped DDIL environments, OCSP is operationally infeasible: there is no guaranteed path to an OCSP responder, and OCSP stapling requires periodic online access. When a node is compromised mid-mission, TTL-based revocation means the compromised node remains trusted for up to 90 days.
+Peat relies on certificate TTL (90-day expiry) for de-facto revocation. In air-gapped DDIL environments, OCSP is operationally infeasible: there is no guaranteed path to an OCSP responder, and OCSP
+stapling requires periodic online access. When a node is compromised mid-mission, TTL-based revocation means the compromised node remains trusted for up to 90 days.
 
 SZL-MESH replaces OCSP with a **CRDT-replicated revocation list** that propagates through the mesh using the same AP CRDT substrate already present in every node.
 
@@ -16,7 +17,7 @@ SZL-MESH replaces OCSP with a **CRDT-replicated revocation list** that propagate
 
 ## 2. Revocation CRDT Document
 
-```
+```text
 crdt_document_id: "szl-mesh/revoked-certs/formation-<formation_id>"
 crdt_type: Automerge grow-only set (LWW map keyed by cert_fingerprint)
 ```
@@ -46,7 +47,7 @@ The `revoked` map is a grow-only CRDT: entries are **never removed**. This guara
 
 Revocation is issued by the Formation CA operator (a node holding Supervisor role):
 
-```
+```text
 1. Operator identifies node N_byz to revoke (manual decision or sentra alert)
 2. Operator constructs RevocationEntry for N_byz's certificate
 3. Operator signs RevocationEntry with their DSSE receipt (doctrine_version=749/14/163)
@@ -65,7 +66,7 @@ Revocation is issued by the Formation CA operator (a node holding Supervisor rol
 
 Every SZL-MESH node performs a revocation check before accepting any peer message:
 
-```
+```text
 function accept_message(msg, sender_node_id, sender_cert_fingerprint):
   revocation_doc = crdt_store.get("szl-mesh/revoked-certs/formation-<id>")
   if sender_cert_fingerprint in revocation_doc["revoked"]:
@@ -103,7 +104,8 @@ Propagation timing depends on mesh connectivity:
 | BLE-only path | 1–30 seconds (BLE throughput limited) |
 | Full formation isolation | Delayed until any mesh path reconnects |
 
-The **residual risk** is that a revoked node continues to operate until its local cell receives the revocation CRDT update. This is mitigated by the Byzantine corroboration layer (spec/04) which limits what a Byzantine node can achieve even without revocation.
+The **residual risk** is that a revoked node continues to operate until its local cell receives the revocation CRDT update. This is mitigated by the Byzantine corroboration layer (spec/04) which
+limits what a Byzantine node can achieve even without revocation.
 
 ---
 
@@ -122,7 +124,7 @@ The Rosie cockpit displays REVOKED-status changes in a distinct amber/red indica
 
 ## 8. Sentra Monitoring
 
-```
+```text
 szl_mesh_revocation_propagation_lag_seconds{formation_id}
   → Time between revocation_at timestamp and last node receiving the CRDT entry
   → High lag = partition severity indicator or sync failure

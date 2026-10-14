@@ -20,7 +20,8 @@ SZL-MESH is an **early-stage protocol skeleton**. The following is our honest, u
 
 ### What We Do NOT Have
 
-- **No public cryptographic audit** — The DSSE receipt scheme and Byzantine corroboration protocol have not been reviewed by an independent cryptographer or security firm. Do not rely on these for production security decisions.
+- **No public cryptographic audit** — The DSSE receipt scheme and Byzantine corroboration protocol have not been reviewed by an independent cryptographer or security firm. Do not rely on these for
+  production security decisions.
 - **Not FIPS 140-3 validated** — Ed25519 is FIPS 186-5 approved, but the implementation (once built) will not carry FIPS 140-3 module validation.
 - **Not Iron Bank** — We make no Iron Bank claim and do not pursue it.
 - **Not FedRAMP** — We make no FedRAMP claim.
@@ -82,4 +83,4 @@ These are design-time properties. **Formal verification is pending.** Λ = Conje
 
 ---
 
-*Doctrine v11 LOCKED 749/14/163 · Kernel commit c7c0ba17 · SLSA L1 honest*
+Doctrine v11 LOCKED 749/14/163 · Kernel commit c7c0ba17 · SLSA L1 honest

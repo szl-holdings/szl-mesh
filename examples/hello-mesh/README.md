@@ -2,7 +2,8 @@
 
 **Doctrine:** v11 LOCKED `749/14/163` · Kernel commit `c7c0ba17` · SLSA L1
 
-This example demonstrates a minimal application participating in the SZL-MESH as a **flagship node**: it writes a CRDT state change, receives a doctrine-pinned DSSE receipt, and verifies that the change appears on the AUTHORIZED track in the Rosie cockpit.
+This example demonstrates a minimal application participating in the SZL-MESH as a **flagship node**: it writes a CRDT state change, receives a doctrine-pinned DSSE receipt, and verifies that the
+change appears on the AUTHORIZED track in the Rosie cockpit.
 
 ---
 
@@ -59,7 +60,7 @@ python3 verify_authorized.py
 
 ## File Structure
 
-```
+```text
 examples/hello-mesh/
 ├── README.md           — this file
 ├── enroll.py           — doctrine-gated enrollment (Invention 5)
@@ -247,7 +248,7 @@ if __name__ == "__main__":
 
 ## Expected Output
 
-```
+```text
 === StateTransitionStatement (Invention 1: DSSE Receipt) ===
 {
   "type": "szl-mesh/state-transition/v1",
@@ -270,11 +271,11 @@ Verifying AUTHORIZED track:
 
 All commits in this example carry:
 
-```
+```text
 Signed-off-by: Yachay <yachay@szlholdings.ai>
 Co-Authored-By: Perplexity Computer Agent <agent@perplexity.ai>
 ```
 
 ---
 
-*Doctrine v11 LOCKED 749/14/163 · Λ = Conjecture 1 (NOT theorem) · SLSA L1*
+Doctrine v11 LOCKED 749/14/163 · Λ = Conjecture 1 (NOT theorem) · SLSA L1
