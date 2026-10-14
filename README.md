@@ -3,15 +3,21 @@
 
 # szl-mesh
 
-### A doctrine-pinned coordination layer that keeps SZL's governance services in sync across an air-gapped fleet, even when nodes go offline.
+## A doctrine-pinned coordination layer that keeps SZL's governance services in sync across an air-gapped fleet, even when nodes go offline
 
-[![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg?style=flat-square)](LICENSE) [![Build](https://github.com/szl-holdings/szl-mesh/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/szl-holdings/szl-mesh/actions/workflows/ci.yml) [![Doctrine v11](https://img.shields.io/badge/Doctrine-v11_LOCKED-3b82f6?style=flat-square)](https://github.com/szl-holdings/.github/tree/main/doctrine) [![SLSA](https://img.shields.io/badge/SLSA-L1_honest_%C2%B7_L2_roadmap-22c55e?style=flat-square)](https://slsa.dev/spec/v1.0/levels)
+[![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg?style=flat-square)](LICENSE)
+[![Build](https://github.com/szl-holdings/szl-mesh/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/szl-holdings/szl-mesh/actions/workflows/ci.yml)
+[![Doctrine v11](https://img.shields.io/badge/Doctrine-v11_LOCKED-3b82f6?style=flat-square)](https://github.com/szl-holdings/.github/tree/main/doctrine)
+[![SLSA](https://img.shields.io/badge/SLSA-L1_honest_%C2%B7_L2_roadmap-22c55e?style=flat-square)](https://slsa.dev/spec/v1.0/levels)
 
 [Docs](https://szl-holdings.github.io/docs-site) · [Quickstart](https://szl-holdings.github.io/docs-site/quickstart) · [SZL Holdings](https://a-11-oy.com)
 
-**Deployment story:** [szl-fleet-overlay](https://github.com/szl-holdings/szl-fleet-overlay) (UDS Operator packages) · [uds-bundles](https://github.com/szl-holdings/uds-bundles) (bundle manifests) · [szl-uds-deployment](https://github.com/szl-holdings/szl-uds-deployment) (air-gap deploy)
+**Deployment story:** [szl-fleet-overlay](https://github.com/szl-holdings/szl-fleet-overlay) (UDS Operator packages) · [uds-bundles](https://github.com/szl-holdings/uds-bundles) (bundle manifests) ·
+[szl-uds-deployment](https://github.com/szl-holdings/szl-uds-deployment) (air-gap deploy)
 
-**Canonical status:** `szl-mesh` is the **active** repo for ongoing UDS mesh / CRDT-coordination work. It supersedes the OTel-schema layer formerly declared canonical in the now-archived [`szl-otel-mesh`](https://github.com/szl-holdings/szl-otel-mesh) (ADR-0001, 2026-06-03); see the amendment note in that repo's [`CANONICAL.md`](https://github.com/szl-holdings/szl-otel-mesh/blob/main/CANONICAL.md).
+**Canonical status:** `szl-mesh` is the **active** repo for ongoing UDS mesh / CRDT-coordination work. It supersedes the OTel-schema layer formerly declared canonical in the now-archived
+[`szl-otel-mesh`](https://github.com/szl-holdings/szl-otel-mesh) (ADR-0001, 2026-06-03); see the amendment note in that repo's
+[`CANONICAL.md`](https://github.com/szl-holdings/szl-otel-mesh/blob/main/CANONICAL.md).
 
 </div>
 
@@ -19,7 +25,8 @@
 <!-- Native identity: szl-brand@4309f6fce89179331b0b3ed8c99494e76c5be256; Orbit v2 icon. -->
 <p>
   <a href="https://github.com/szl-holdings">
-    <img src="https://raw.githubusercontent.com/szl-holdings/szl-brand/4309f6fce89179331b0b3ed8c99494e76c5be256/kit/logos/orbit-v2/suite/szl-icon-32.svg" alt="SZL Holdings — Orbit v2" width="32" height="32" />
+    <img src="https://raw.githubusercontent.com/szl-holdings/szl-brand/4309f6fce89179331b0b3ed8c99494e76c5be256/kit/logos/orbit-v2/suite/szl-icon-32.svg" alt="SZL Holdings — Orbit v2" width="32"
+    height="32" />
   </a>
 </p>
 
@@ -30,11 +37,13 @@
 
 ## 💡 Why it matters
 
-It brings always-converging shared state and Byzantine-fault-tolerant agreement to edge and disconnected deployments, so a sovereign fleet keeps making consistent, signed governance decisions without a central server.
+It brings always-converging shared state and Byzantine-fault-tolerant agreement to edge and disconnected deployments, so a sovereign fleet keeps making consistent, signed governance decisions without
+a central server.
 
 ## ▶️ Live demo
 
-This is a **public** repository. As a coordination/CRDT mesh layer it has no standalone hosted demo — run it locally via the Quick start below, or see [docs.szlholdings.com](https://szl-holdings.github.io/docs-site) for the public product walkthrough.
+This is a **public** repository. As a coordination/CRDT mesh layer it has no standalone hosted demo — run it locally via the Quick start below, or see
+[docs.szlholdings.com](https://szl-holdings.github.io/docs-site) for the public product walkthrough.
 
 ## ⚡ Quick start (30 seconds)
 
@@ -46,7 +55,8 @@ make quickstart   # or: see docs.szlholdings.com/quickstart
 
 ## 🔍 How it works
 
-In two sentences: this component is part of SZL's governed-AI mesh — it enforces policy and emits signed, replayable audit receipts so every AI action can be verified after the fact. The full mathematical foundation, formal proofs, and protocol details are documented below and in the [technical docs](https://szl-holdings.github.io/docs-site).
+In two sentences: this component is part of SZL's governed-AI mesh — it enforces policy and emits signed, replayable audit receipts so every AI action can be verified after the fact. The full
+mathematical foundation, formal proofs, and protocol details are documented below and in the [technical docs](https://szl-holdings.github.io/docs-site).
 
 ---
 
@@ -55,9 +65,10 @@ In two sentences: this component is part of SZL's governed-AI mesh — it enforc
 
 # SZL-MESH
 
-**Doctrine-pinned CRDT mesh layered on peat — 7 inventions beyond UDS Fleet**
+Doctrine-pinned CRDT mesh layered on peat — 7 inventions beyond UDS Fleet
 
-> **Doctrine:** v11 LOCKED `749/14/163` · Kernel commit `c7c0ba17` · locked-proven = 8 `{F1,F4,F7,F11,F12,F18,F19,F22}` · Λ = Conjecture 1 (NOT theorem) · SLSA L1 honest · L2 verified-provenance on roadmap (NOT L3)  
+> **Doctrine:** v11 LOCKED `749/14/163` · Kernel commit `c7c0ba17` · locked-proven = 8 `{F1,F4,F7,F11,F12,F18,F19,F22}` · Λ = Conjecture 1 (NOT theorem) · SLSA L1 honest · L2 verified-provenance on
+> roadmap (NOT L3)\
 > **Status:** Skeleton — Design complete, implementation in progress  
 > **Date:** 2026-06-02  
 > **Prepared by:** SZL Holdings Research (PhD Distributed Systems)
@@ -66,7 +77,8 @@ In two sentences: this component is part of SZL's governed-AI mesh — it enforc
 
 ## What Is SZL-MESH?
 
-SZL-MESH is SZL Holdings' native coordination substrate for DDIL-resilient fleet state. It **layers on top of [peat](https://github.com/defenseunicorns/peat)** (Defense Unicorns' CRDT mesh protocol) — it does NOT fork or replace peat. Instead, it adds a capability that peat explicitly lacks: **doctrine-pinned DSSE receipt chains on top of CRDT state transitions**.
+SZL-MESH is SZL Holdings' native coordination substrate for DDIL-resilient fleet state. It **layers on top of [peat](https://github.com/defenseunicorns/peat)** (Defense Unicorns' CRDT mesh protocol) —
+it does NOT fork or replace peat. Instead, it adds a capability that peat explicitly lacks: **doctrine-pinned DSSE receipt chains on top of CRDT state transitions**.
 
 > Peat knows **WHAT** happened to fleet state. SZL-MESH knows **WHETHER** that change was AUTHORIZED under a locked governance doctrine and **WHO** signed the authorization.
 
@@ -81,12 +93,14 @@ This is not incremental improvement. It is a **governance layer** — the differ
 **Peat:** Signs each CRDT operation with the originating node's Ed25519 key (integrity: we know WHO wrote it).
 
 **SZL-MESH adds:** Every Automerge change that crosses a policy boundary is wrapped in a **DSSE (Dead Simple Signing Envelope)** receipt containing:
+
 - `doctrine_version: "749/14/163"` — the locked governance version
 - `kernel_commit: "c7c0ba17"` — the pinned kernel context
 - `change_hash` — SHA-256 binding the receipt to the exact Automerge change chunk
 - `transition_class` — PLATFORM_STATUS | DEPLOYMENT | PACKAGE | COMMAND | CELL_FORMATION
 
-**Why categorical, not incremental:** Peat proves identity (who wrote). SZL-MESH proves authority (was this write authorized under current governance). Adding this to peat would require fundamental redesign — it cannot be bolted on.
+**Why categorical, not incremental:** Peat proves identity (who wrote). SZL-MESH proves authority (was this write authorized under current governance). Adding this to peat would require fundamental
+redesign — it cannot be bolted on.
 
 See: [`spec/01-dsse-receipts.md`](spec/01-dsse-receipts.md)
 
@@ -117,7 +131,7 @@ See: [`spec/02-two-track-state.md`](spec/02-two-track-state.md)
 
 **SZL-MESH adds:** Receipt-priority skip-layer routing — a receipted AUTHORIZED change bypasses intermediate aggregation and routes directly to command hub:
 
-```
+```text
 Without skip-layer (peat baseline):
   Squad → Platoon → Company → Command   (3 hops, O(n log n))
 
@@ -127,6 +141,7 @@ With SZL skip-layer (AUTHORIZED changes only):
 ```
 
 **Asymptotic analysis:** Let `r` be the fraction of receipted changes, `N` total nodes.
+
 - Peat: `T(N) = O(N log N)` for all changes
 - SZL-MESH: `T(N) = r·O(N) + (1-r)·O(N log N)` → O(N) as r → 1
 
@@ -140,9 +155,10 @@ See: [`spec/03-skip-layer-aggregation.md`](spec/03-skip-layer-aggregation.md)
 
 **Peat:** Assumes fail-stop nodes. A Byzantine peer with a valid formation key can inject arbitrary CRDT state.
 
-**SZL-MESH adds:** k-of-n corroboration layered on top of the CRDT — NOT as a consensus protocol (which would sacrifice availability), but as a **soft voting annotation** that runs alongside the AP CRDT without blocking writes:
+**SZL-MESH adds:** k-of-n corroboration layered on top of the CRDT — NOT as a consensus protocol (which would sacrifice availability), but as a **soft voting annotation** that runs alongside the AP
+CRDT without blocking writes:
 
-```
+```text
 1. Any node writes state (immediately available — AP guarantee preserved)
 2. Corroboration collector observes changes from multiple nodes
 3. When k independent nodes report same value for a key within window T:
@@ -150,7 +166,8 @@ See: [`spec/03-skip-layer-aggregation.md`](spec/03-skip-layer-aggregation.md)
 4. Single Byzantine node cannot achieve CORROBORATED for false state if k > 1
 ```
 
-**Key novelty:** BFT consensus (PBFT, Tendermint, HotStuff) sacrifices availability. SZL-MESH achieves **Byzantine soft-safety** while preserving full AP availability. A different point in the BFT trade-off space.
+**Key novelty:** BFT consensus (PBFT, Tendermint, HotStuff) sacrifices availability. SZL-MESH achieves **Byzantine soft-safety** while preserving full AP availability. A different point in the BFT
+trade-off space.
 
 Default policy: `k=2, window=30s` for PLATFORM_STATUS and COMMAND transitions.
 
@@ -163,13 +180,15 @@ See: [`spec/04-byzantine-corroboration.md`](spec/04-byzantine-corroboration.md)
 **Peat:** Formation key HMAC proves physical presence. Anyone with the formation key can enroll.
 
 **SZL-MESH adds:** Enrollment additionally requires claiming:
+
 - `doctrine_version: "749/14/163"` (cryptographically asserted in CSR)
 - `kernel_commit: "c7c0ba17"`
 - `slsa_level: "L1"`
 
 A node running an older doctrine — even with the formation key — **cannot enroll as AUTHORIZED**. It may participate as OBSERVED (if peat-compatible) but cannot generate doctrine receipts.
 
-**Lifecycle benefit:** When governance doctrine increments (new NDAA provision, new Section 889 vendor), stale nodes are automatically downgraded without explicit revocation. The governance lifecycle is **encoded in the cryptographic enrollment proof**.
+**Lifecycle benefit:** When governance doctrine increments (new NDAA provision, new Section 889 vendor), stale nodes are automatically downgraded without explicit revocation. The governance lifecycle
+is **encoded in the cryptographic enrollment proof**.
 
 Section 889 covered vendors checked at enrollment: **Huawei, ZTE, Hytera, Hikvision, Dahua** (exactly 5).
 
@@ -183,13 +202,14 @@ See: [`spec/05-doctrine-gated-enrollment.md`](spec/05-doctrine-gated-enrollment.
 
 **SZL-MESH adds:** A **CRDT-replicated revocation list** that propagates revocations through the mesh using the same AP CRDT substrate — no OCSP server required:
 
-```
+```text
 crdt_document: "szl-mesh/revoked-certs/formation-<id>"
 type: Automerge grow-only set
 contents: [{ node_id, cert_fingerprint, revoked_at, reason }]
 ```
 
 Properties:
+
 - **AP available** — revocations propagate through CRDT; nodes check local replica
 - **Eventually consistent** — revocation reaches partitioned cell when any path reconnects
 - **Monotonic** — revocations are never un-done (grow-only set)
@@ -205,7 +225,7 @@ See: [`spec/06-crdt-revocation.md`](spec/06-crdt-revocation.md)
 
 **SZL-MESH adds:** Receipt health metrics fed into the a11oy policy/immune-gate — anomaly detection on governance integrity:
 
-```
+```text
 szl_mesh_authorized_fraction{formation_id, cell_id}
   → Ratio AUTHORIZED / total changes per time window
   → Drop below threshold = governance anomaly alert
@@ -222,13 +242,14 @@ szl_mesh_doctrine_version_mismatch_count{formation_id}
 
 No existing mesh protocol (peat, Consul, Istio, Linkerd) exposes governance-layer integrity metrics. This is unique to SZL-MESH.
 
-See: [`spec/07-sentra-governance-metrics.md`](spec/07-sentra-governance-metrics.md) — governance metrics for the **CHAPAQ** egress immune-inspector (spec filename is an immutable infra coordinate, kept verbatim).
+See: [`spec/07-sentra-governance-metrics.md`](spec/07-sentra-governance-metrics.md) — governance metrics for the **CHAPAQ** egress immune-inspector
+(spec filename is an immutable infra coordinate, kept verbatim).
 
 ---
 
 ## Architecture Overview
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────────┐
 │  SZL-MESH LAYER STACK                                           │
 ├─────────────────────────────────────────────────────────────────┤
@@ -282,7 +303,7 @@ See: [`spec/07-sentra-governance-metrics.md`](spec/07-sentra-governance-metrics.
 
 ## Repository Layout
 
-```
+```text
 szl-mesh/
 ├── README.md               — this file
 ├── LICENSE                 — Apache-2.0
@@ -345,7 +366,7 @@ cd examples/hello-mesh
 
 DCO trailers required on every commit:
 
-```
+```text
 Signed-off-by: Yachay <yachay@szlholdings.ai>
 Co-Authored-By: Perplexity Computer Agent <agent@perplexity.ai>
 ```
@@ -381,7 +402,7 @@ Apache-2.0. See [LICENSE](LICENSE).
 - [UDS CLI](https://uds.defenseunicorns.com/docs/getting-started/) v0.14+
 - [peat](https://github.com/defenseunicorns/peat) node in your cluster
 
-### When a release ships, deployment will follow this pattern:
+### When a release ships, deployment will follow this pattern
 
 ```bash
 zarf package pull oci://ghcr.io/szl-holdings/szl-mesh:<tag>
@@ -389,7 +410,9 @@ cosign verify-blob --certificate-identity-regexp   "https://github.com/szl-holdi
 uds deploy oci://ghcr.io/szl-holdings/szl-mesh:<tag>
 ```
 
-## Contributing
+<a id="contributing-1"></a>
+
+## Contributing guidelines
 
 See [CONTRIBUTING.md](CONTRIBUTING.md). All commits require DCO sign-off:
 
@@ -401,14 +424,15 @@ git commit -s -m "your message"
 
 See [SECURITY.md](SECURITY.md) for vulnerability disclosure policy.
 
-## License
+<a id="license-1"></a>
+
+## License details
 
 Apache-2.0. See [LICENSE](LICENSE).
 
 ---
 
 © SZL Holdings · Doctrine v11 LOCKED (749/14/163, kernel `c7c0ba17`) · Λ = Conjecture 1 · SLSA L1 honest · L2 verified-provenance on roadmap · Section 889 = 5 vendors
-
 
 </details>
 
@@ -420,7 +444,8 @@ Apache-2.0. See [LICENSE](LICENSE).
 
 Cite this work via [`CITATION.cff`](CITATION.cff). Math foundations: [szl-papers](https://github.com/szl-holdings/szl-papers) · [lutar-lean](https://github.com/szl-holdings/lutar-lean) (kernel `c7c0ba17`).
 
-<sub>Λ Conjecture 1 (not a theorem) · 749/14/163 v11 LOCKED (kernel `c7c0ba17`) · SLSA L1 honest · L2 verified-provenance on roadmap · Section 889 = 5 vendors · [SZL Holdings](https://a-11-oy.com) · Apache-2.0 code · CC-BY-4.0 papers</sub>
+<sub>Λ Conjecture 1 (not a theorem) · 749/14/163 v11 LOCKED (kernel `c7c0ba17`) · SLSA L1 honest · L2 verified-provenance on roadmap · Section 889 = 5 vendors · [SZL Holdings](https://a-11-oy.com) ·
+Apache-2.0 code · CC-BY-4.0 papers</sub>
 
 ## Sovereign Mesh HTTP API (`src/sovereign/api.py`)
 
@@ -448,6 +473,7 @@ uvicorn src.sovereign.api:app --host 0.0.0.0 --port 9090
 ```
 
 Or mount into an existing FastAPI app:
+
 ```python
 from fastapi import FastAPI
 from src.sovereign.api import register
@@ -523,7 +549,8 @@ CRDT coordination substrate, not a recursion engine. This section is a **doctrin
 cross-reference** plus an honest note on how the mesh's real flow *relates* to the loop.
 
 The canonical definition is the receipt-closed kernel
-[`szl-holdings/ouroboros` → `src/loop-kernel.ts`](https://github.com/szl-holdings/ouroboros/blob/main/src/loop-kernel.ts) (`runLoop`): *bounded recursion with measurable convergence* that MUST terminate on one
+[`szl-holdings/ouroboros` → `src/loop-kernel.ts`](https://github.com/szl-holdings/ouroboros/blob/main/src/loop-kernel.ts) (`runLoop`): *bounded recursion with measurable convergence* that MUST
+terminate on one
 of four exit conditions — `converged | consistent | aborted | budgetExhausted` — and emits a
 governance receipt for every run. **The trace is the product.**
 

@@ -8,9 +8,11 @@
 
 ## 1. Motivation
 
-Peat exposes `GetSyncStats` for basic sync monitoring and emits CDC events to Kafka/NATS for downstream consumers. Neither peat nor any other mesh protocol (Consul, Istio, Linkerd) exposes **governance-layer integrity metrics** — i.e., metrics about whether state transitions are authorized, whether Byzantine activity is detected, and whether doctrine compliance is being maintained.
+Peat exposes `GetSyncStats` for basic sync monitoring and emits CDC events to Kafka/NATS for downstream consumers. Neither peat nor any other mesh protocol (Consul, Istio, Linkerd) exposes
+**governance-layer integrity metrics** — i.e., metrics about whether state transitions are authorized, whether Byzantine activity is detected, and whether doctrine compliance is being maintained.
 
-SZL-MESH treats governance integrity as a **first-class telemetry channel**: a dedicated set of Prometheus-compatible metrics fed into sentra's immune filter, enabling anomaly detection on governance health — not just network health.
+SZL-MESH treats governance integrity as a **first-class telemetry channel**: a dedicated set of Prometheus-compatible metrics fed into sentra's immune filter, enabling anomaly detection on governance
+health — not just network health.
 
 ---
 
@@ -18,7 +20,7 @@ SZL-MESH treats governance integrity as a **first-class telemetry channel**: a d
 
 ### 2.1 Receipt Rate: `szl_mesh_authorized_fraction`
 
-```
+```text
 Name:    szl_mesh_authorized_fraction
 Type:    Gauge (computed per scrape interval)
 Labels:  formation_id, cell_id, transition_class
@@ -29,6 +31,7 @@ Window:  60 seconds (configurable)
 **Sentra anomaly rule:** If `szl_mesh_authorized_fraction < 0.7` for any `cell_id` for more than 2 consecutive windows → **Governance Anomaly Alert**.
 
 Interpretation:
+
 - `1.0` — all changes receipted; full-authority mesh
 - `0.5–1.0` — mixed formation with peat-native nodes or intermittent partitions
 - `< 0.3` — severe: possible Byzantine flooding of OBSERVED track, or mass doctrine mismatch
@@ -37,7 +40,7 @@ Interpretation:
 
 ### 2.2 Byzantine Corroboration Failures: `szl_mesh_byzantine_corroboration_failures_total`
 
-```
+```text
 Name:    szl_mesh_byzantine_corroboration_failures_total
 Type:    Counter
 Labels:  node_id, formation_id, transition_class
@@ -52,7 +55,7 @@ Action: Human review triggered; may initiate revocation ceremony (spec/06).
 
 ### 2.3 Revocation Propagation Lag: `szl_mesh_revocation_propagation_lag_seconds`
 
-```
+```text
 Name:    szl_mesh_revocation_propagation_lag_seconds
 Type:    Histogram (buckets: 0.1, 0.5, 1, 5, 30, 60, 300, 3600)
 Labels:  formation_id, revoked_node_id
@@ -67,7 +70,7 @@ Interpretation: High lag indicates severe mesh partitioning; revoked nodes may b
 
 ### 2.4 Doctrine Version Mismatches: `szl_mesh_doctrine_version_mismatch_count`
 
-```
+```text
 Name:    szl_mesh_doctrine_version_mismatch_count
 Type:    Counter
 Labels:  formation_id, claimed_doctrine_version, claimed_kernel_commit
@@ -77,6 +80,7 @@ Increments: when an enrollment request claims wrong doctrine_version or kernel_c
 **Sentra anomaly rule:** Any non-zero value → **Doctrine Mismatch Alert**.
 
 Interpretation:
+
 - Stale nodes attempting enrollment after doctrine update
 - Rogue nodes attempting enrollment with fabricated doctrine claims
 - Misconfigured deployment
@@ -85,7 +89,7 @@ Interpretation:
 
 ### 2.5 Split-Brain Recovery: `szl_mesh_split_brain_recovery_seconds`
 
-```
+```text
 Name:    szl_mesh_split_brain_recovery_seconds
 Type:    Histogram
 Labels:  formation_id, cell_id
@@ -96,7 +100,7 @@ Measures: time from partition heal to full CRDT convergence (all nodes at same h
 
 ### 2.6 Pre-Partition Change Count: `szl_mesh_pre_partition_change_count`
 
-```
+```text
 Name:    szl_mesh_pre_partition_change_count
 Type:    Counter
 Labels:  formation_id, cell_id
@@ -137,9 +141,10 @@ Events are emitted over a dedicated gRPC stream (`SentraEventStream` RPC — see
 
 ## 3. Sentra Immune Filter Integration
 
-Sentra's immune filter applies anomaly detection rules on the governance metrics stream. The filter is modeled on the biological immune system: healthy baseline → deviation detection → alert → human review → possible response (revocation, formation reset).
+Sentra's immune filter applies anomaly detection rules on the governance metrics stream. The filter is modeled on the biological immune system: healthy baseline → deviation detection → alert → human
+review → possible response (revocation, formation reset).
 
-```
+```text
 SZL-MESH node
     │
     ├─ Prometheus scrape endpoint :9090/metrics

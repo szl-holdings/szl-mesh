@@ -13,7 +13,7 @@ You, Leskovec, He & Xie, *Graph Structure of Neural Networks*, ICML 2020
 network as a **relational graph**: nodes hold features, and one network layer is
 one **round of message exchange**
 
-```
+```text
 x_v^{(r+1)} = AGG^{(r)}( { f^{(r)}(x_u) : u ∈ N(v) } )
 ```
 

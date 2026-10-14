@@ -8,9 +8,11 @@
 
 ## 1. Motivation
 
-Peat treats all CRDT state equivalently: if a node holds the formation key and a valid Ed25519 certificate, its writes are as authoritative as any other node. There is one track. This is correct for coordination but insufficient for governance.
+Peat treats all CRDT state equivalently: if a node holds the formation key and a valid Ed25519 certificate, its writes are as authoritative as any other node. There is one track. This is correct for
+coordination but insufficient for governance.
 
 SZL-MESH introduces **two coexisting tracks** in the same CRDT store:
+
 - **AUTHORIZED** — state that carries a valid doctrine receipt
 - **OBSERVED** — state present in the CRDT but without a valid receipt
 
@@ -20,7 +22,7 @@ The key design invariant: **OBSERVED state is never dropped**. It remains visibl
 
 ## 2. Track Definitions
 
-```
+```text
 AUTHORIZED track
   Condition:  CRDT change carries a DSSE receipt that passes full validation
               (see spec/01-dsse-receipts.md §5)
@@ -48,7 +50,7 @@ OBSERVED track
 
 Track assignment runs at the **Doctrine Receipt Gate (L4)** after every CRDT merge:
 
-```
+```text
 for each change in merged_crdt_changeset:
   if change.has_dsse_receipt():
     track = validate_receipt(change.dsse_receipt, change.raw_bytes, now())
@@ -86,6 +88,7 @@ This annotation is itself a CRDT map — it merges deterministically across node
 ## 5. Backwards Compatibility with Vanilla Peat
 
 Vanilla peat nodes participate in the mesh normally:
+
 - Their changes propagate via Automerge sync as usual
 - SZL-MESH nodes receive these changes and classify them as **OBSERVED** (no receipt attached)
 - No peat node is disconnected, banned, or rejected based on receipt status
@@ -127,7 +130,7 @@ For `transition_class == COMMAND`:
 
 ## 8. State Track Lifecycle
 
-```
+```text
 CRDT change arrives
         │
         ▼

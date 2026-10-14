@@ -8,9 +8,11 @@
 
 ## 1. The Byzantine Problem in CRDT Systems
 
-Peat assumes **fail-stop nodes**: a node is either online and honest, or offline. A Byzantine peer — a node that holds a valid formation key and Ed25519 certificate but has been adversarially controlled — can inject arbitrary CRDT changes signed with its valid key. Peat has no defense against this.
+Peat assumes **fail-stop nodes**: a node is either online and honest, or offline. A Byzantine peer — a node that holds a valid formation key and Ed25519 certificate but has been adversarially
+controlled — can inject arbitrary CRDT changes signed with its valid key. Peat has no defense against this.
 
-SZL-MESH adds **Byzantine corroboration** layered on top of the CRDT — not as a consensus protocol (which would sacrifice AP availability), but as a **soft voting annotation** that runs alongside the AP CRDT without blocking writes.
+SZL-MESH adds **Byzantine corroboration** layered on top of the CRDT — not as a consensus protocol (which would sacrifice AP availability), but as a **soft voting annotation** that runs alongside the
+AP CRDT without blocking writes.
 
 ---
 
@@ -34,7 +36,7 @@ SZL-MESH achieves **Byzantine soft-safety** — correct classification of state 
 
 ### 3.1 Overview
 
-```
+```text
 1. Any node N_i writes state S_v for document D, key K  (immediate, AP)
 2. Corroboration Collector observes changes from all nodes in the cell
 3. When k independent nodes {N_1, N_2, ..., N_k} have all written S_v 
@@ -105,15 +107,18 @@ The corroboration document is a CRDT map; concurrent writes from multiple corrob
 
 ### 4.1 Corroboration Safety
 
-**Theorem (informal):** Let `f` be the number of Byzantine nodes in a cell of `n` nodes. For a corroboration policy with threshold `k`, if `k > f`, then Byzantine nodes cannot achieve `CORROBORATED` for any false state value `S_false` for which no honest node has independently observed `S_false`.
+**Theorem (informal):** Let `f` be the number of Byzantine nodes in a cell of `n` nodes. For a corroboration policy with threshold `k`, if `k > f`, then Byzantine nodes cannot achieve `CORROBORATED`
+for any false state value `S_false` for which no honest node has independently observed `S_false`.
 
-**Proof sketch:** For `S_false` to become `CORROBORATED`, `k` distinct nodes must report `S_false`. If `k > f`, at least one of the `k` reporters must be honest. An honest node reports only what it has observed. If no honest node has observed `S_false`, no honest node reports it, so the quorum of `k` cannot be achieved by Byzantine nodes alone.
+**Proof sketch:** For `S_false` to become `CORROBORATED`, `k` distinct nodes must report `S_false`. If `k > f`, at least one of the `k` reporters must be honest. An honest node reports only what it
+has observed. If no honest node has observed `S_false`, no honest node reports it, so the quorum of `k` cannot be achieved by Byzantine nodes alone.
 
 This is weaker than PBFT safety (which holds against up to `f < n/3` Byzantine nodes for all values, under all conditions) but does not sacrifice availability.
 
 ### 4.2 Corroboration Liveness
 
-**Property:** If `k` honest nodes independently observe the same value `S_v` for `(D, K)` within window `T`, and all `k` nodes are connected to the corroboration collector within `T`, then `S_v` achieves `CORROBORATED` within `T + propagation_delay`.
+**Property:** If `k` honest nodes independently observe the same value `S_v` for `(D, K)` within window `T`, and all `k` nodes are connected to the corroboration collector within `T`, then `S_v`
+achieves `CORROBORATED` within `T + propagation_delay`.
 
 **Note:** If the cell is partitioned and fewer than `k` honest nodes are reachable, corroboration stalls at `PENDING`. This is the availability trade-off — CRDT writes still succeed; corroboration is best-effort.
 
@@ -123,7 +128,7 @@ This is weaker than PBFT safety (which holds against up to `f < n/3` Byzantine n
 
 The sentra integration (spec/07) exposes corroboration metrics:
 
-```
+```text
 szl_mesh_byzantine_corroboration_failures{node_id}
   → A node that repeatedly reports values that fail corroboration
   → Anomaly threshold: >5 failures in 60s → Byzantine candidate alert
@@ -157,7 +162,7 @@ The AUTHORIZED + FAILED combination is particularly significant: it may indicate
 
 To prevent Byzantine state flooding, SZL-MESH enforces per-node write quotas at the aggregator level:
 
-```
+```text
 max_changes_per_node_per_minute: 600       (10/second average)
 max_document_size_per_node_bytes: 10485760  (10 MB)
 max_peers_per_node: 50
