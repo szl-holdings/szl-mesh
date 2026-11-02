@@ -277,9 +277,11 @@ def verify_mesh_receipt(
 
     Delegates the cryptographic check to :func:`szl_receipt.verify_receipt`
     (keyless envelopes honestly return ``(False, "unsigned-honest")``). When
-    ``stmt`` is supplied, additionally confirms the signed body's
-    ``input_digest`` / ``output_digest`` re-derive from that statement — so any
-    post-hoc edit to the transition flips a digest and fails the rebind.
+    ``stmt`` is supplied, additionally re-derives the entire canonical mesh
+    body: subject, transition digests, policy, quorum, witnesses and fixed
+    schema/doctrine/energy claims. Pass the same custom ``policy_id``,
+    ``quorum_id`` and ``witnesses`` used at emission; defaults are expected
+    values, not wildcards. Without ``stmt``, only the signature is checked.
     """
     szl_receipt = _require_szl_receipt()
     ok, detail = szl_receipt.verify_receipt(envelope, public_key_pem=public_key_pem)
@@ -294,9 +296,15 @@ def verify_mesh_receipt(
             body = json.loads(base64.b64decode(envelope["payload"]).decode("utf-8"))
         except Exception as exc:  # noqa: BLE001
             return False, f"payload decode error: {exc}"
+        if not isinstance(body, dict):
+            return False, "mesh-body-not-object"
         if body.get("input_digest") != transition_input_digest(stmt):
             return False, "input-digest-rebind-mismatch"
         if body.get("output_digest") != transition_output_digest(stmt):
             return False, "output-digest-rebind-mismatch"
+        if _digest(body) != mesh_receipt_body_digest(
+            stmt, policy_id=policy_id, quorum_id=quorum_id, witnesses=witnesses
+        ):
+            return False, "mesh-body-rebind-mismatch"
 
     return True, "ok"

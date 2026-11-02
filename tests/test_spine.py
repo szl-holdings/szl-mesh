@@ -118,6 +118,61 @@ def test_tamper_breaks_output_rebind():
     assert detail2 == "output-digest-rebind-mismatch"
 
 
+@pytest.mark.parametrize("changed", ["node", "policy", "quorum", "witnesses"])
+def test_rebind_rejects_different_subject_and_governance_context(changed):
+    stmt, _, _ = _statement()
+    private, public = szl_receipt.generate_keypair()
+    options = {"policy_id": "policy-a", "quorum_id": "quorum-a",
+               "witnesses": [{"node": "witness-a", "approved": True}]}
+    env = spine.emit_mesh_receipt(stmt, private_key_pem=private, **options)
+    assert szl_receipt.verify_receipt(env, public)[0]
+    assert spine.verify_mesh_receipt(env, public_key_pem=public, stmt=stmt, **options)[0]
+
+    expected = dict(options)
+    if changed == "node":
+        stmt = dict(stmt, node_id="different-node")
+    elif changed == "policy":
+        expected["policy_id"] = "different-policy"
+    elif changed == "quorum":
+        expected["quorum_id"] = "different-quorum"
+    else:
+        # Python considers True == 1, but their canonical JSON bytes differ.
+        expected["witnesses"] = [{"node": "witness-a", "approved": 1}]
+    assert spine.verify_mesh_receipt(
+        env, public_key_pem=public, stmt=stmt, **expected
+    ) == (False, "mesh-body-rebind-mismatch")
+
+
+@pytest.mark.parametrize("field,value", [
+    ("schema", "another-receipt-schema"),
+    ("energy", {"measured": True, "joules": 1}),
+    ("doctrine_version", "different-doctrine"),
+])
+def test_rebind_rejects_validly_signed_noncanonical_mesh_claims(field, value):
+    stmt, _, _ = _statement()
+    private, public = szl_receipt.generate_keypair()
+    body = spine.build_mesh_receipt_body(stmt)
+    body[field] = value
+    env = szl_receipt.sign_receipt(
+        szl_receipt.Receipt(kind=spine.RECEIPT_KIND, body=body), private
+    )
+    assert szl_receipt.verify_receipt(env, public)[0]
+    assert spine.verify_mesh_receipt(env, public_key_pem=public, stmt=stmt) == (
+        False, "mesh-body-rebind-mismatch"
+    )
+
+
+@pytest.mark.parametrize("body", [[], None, "not-a-mesh-body"])
+def test_rebind_rejects_validly_signed_nonobject_body(body):
+    stmt, _, _ = _statement()
+    private, public = szl_receipt.generate_keypair()
+    env = szl_receipt.sign_receipt(szl_receipt.Receipt(kind="other", body=body), private)
+    assert szl_receipt.verify_receipt(env, public)[0]
+    assert spine.verify_mesh_receipt(env, public_key_pem=public, stmt=stmt) == (
+        False, "mesh-body-not-object"
+    )
+
+
 def test_fold_from_existing_dsse_receipt():
     raw = b'{"k":"v"}'
     ch = hashlib.sha256(raw).hexdigest()
