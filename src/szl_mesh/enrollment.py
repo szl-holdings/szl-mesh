@@ -18,11 +18,16 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any, Dict, Optional
 
+from cryptography.exceptions import UnsupportedAlgorithm
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric import ec
+
 from .receipts import (
     DOCTRINE_VERSION,
     KERNEL_COMMIT,
     SECTION_889_VENDORS,
     SLSA_LEVEL,
+    node_id_from_pubkey,
 )
 
 # Section 889 covered vendors with full legal names (for attestation matching).
@@ -179,11 +184,36 @@ class FormationGateway:
         if node_id in self.cert_store:
             return EnrollmentResult(False, node_id, "DUPLICATE_NODE_ID")
 
-        # Bind node_id to the presented public key (used by the Receipt Gate).
+        # Audit repair: OpenAI Codex for the owner's repository review.
+        # The formation proof binds NodeID, not the separately supplied DER.
+        # Validate that DER is the P-256 key committed to by NodeID before
+        # reserving the identity. A captured proof must not let another key
+        # poison the registry and block the legitimate node's enrollment.
+        public_key_der = req.get("public_key_der")
+        if not isinstance(public_key_der, bytes):
+            return EnrollmentResult(False, node_id, "INVALID_PUBLIC_KEY")
+        try:
+            public_key = serialization.load_der_public_key(public_key_der)
+        except (ValueError, TypeError, UnsupportedAlgorithm):
+            return EnrollmentResult(False, node_id, "INVALID_PUBLIC_KEY")
+        if not isinstance(public_key, ec.EllipticCurvePublicKey) or not isinstance(
+            public_key.curve, ec.SECP256R1
+        ):
+            return EnrollmentResult(False, node_id, "INVALID_PUBLIC_KEY")
+        canonical_der = public_key.public_bytes(
+            serialization.Encoding.DER,
+            serialization.PublicFormat.SubjectPublicKeyInfo,
+        )
+        if public_key_der != canonical_der:
+            return EnrollmentResult(False, node_id, "INVALID_PUBLIC_KEY")
+        if node_id != node_id_from_pubkey(public_key):
+            return EnrollmentResult(False, node_id, "NODE_ID_KEY_MISMATCH")
+
+        # Bind node_id to the validated public key (used by the Receipt Gate).
         enrolled_at = now_utc.strftime("%Y-%m-%dT%H:%M:%SZ")
         self.cert_store[node_id] = {
             "node_id": node_id,
-            "public_key_der": req["public_key_der"],
+            "public_key_der": canonical_der,
             "enrolled_at": enrolled_at,
             "doctrine_version": DOCTRINE_VERSION,
             "kernel_commit": KERNEL_COMMIT,

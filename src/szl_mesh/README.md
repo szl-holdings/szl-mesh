@@ -18,6 +18,30 @@ PYTHONPATH=src python3 -m szl_mesh.demo
 PYTHONPATH=src python3 tests/test_runtime.py
 ```
 
+## Enrollment and receipt trust
+
+Origin: OpenAI Codex, implementing the owner's repository audit.
+
+`MeshNode` authorizes a received operation only against its enrolled formation's
+public-key registry. Before enrollment, or after a failed first enrollment,
+valid self-signed receipts remain `OBSERVED`; their signatures can still be
+checked and their operations remain available for forensic inspection.
+Reapplying a receipt after successful enrollment checks the new registry.
+
+The gateway accepts only canonical P-256 SubjectPublicKeyInfo DER whose SHA-256
+identity matches `node_id`. The formation proof binds that identity. Invalid,
+missing or substituted key material is rejected before the certificate store
+changes, so a captured proof cannot reserve the identity with a different key.
+
+`verify_receipt_signature()` establishes signature/identity self-consistency.
+The lower-level `validate_receipt(..., pubkey_registry=None)` mode does not
+establish membership in a trusted formation. Runtime callers always supply a
+registry, including an empty registry before enrollment.
+
+This remains an in-process reference runtime: the certificate store and
+revocations are held in memory, and this change does not implement the planned
+Formation CA, durable enrollment, proof of key possession or transport security.
+
 ## Doctrine
 
 v11 LOCKED `749/14/163` @ `c7c0ba17`, SLSA L1. Section 889 vendors exactly 5.
