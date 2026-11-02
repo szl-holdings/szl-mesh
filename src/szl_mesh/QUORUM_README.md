@@ -38,3 +38,5 @@ The **soft-safety AP** corroboration model (spec/04) is the real, shipped behavi
 forged-sig / corroboration cases (10/10). Engine `__init__.py` sha256
 `7b33c053bed58a94ecb8d83b33295ff0a067fc20645e5e72bc4da6eca1980a77`,
 vectors sha256 `86236cdde8f9ccb2d64f5d9011dcb4db141575b7bfd54ae24985bbeeb3587270`.
+
+Verification uses a caller-owned 3-of-4 policy by default. Certificate `threshold` and `n` fields must match that policy; changing unsigned metadata cannot lower the required number of signatures. Callers using a different policy must explicitly pass `verify_quorum(qc, pubkeys, threshold=..., n=...)`. Policies require integer `1 <= threshold <= n`.
