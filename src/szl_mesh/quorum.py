@@ -169,6 +169,11 @@ class QuorumCertificate:
         }
 
 
+def _validate_quorum_policy(threshold: int, n: int) -> None:
+    if type(threshold) is not int or type(n) is not int or not 1 <= threshold <= n:
+        raise ValueError("quorum policy requires integer 1 <= threshold <= n")
+
+
 def propose_action(
     action,
     witness_keys: dict,
@@ -198,6 +203,7 @@ def propose_action(
     A QC is NEVER fabricated: every signature in the returned certificate is a real
     ECDSA-P256-SHA256 signature produced by the witness's own private key.
     """
+    _validate_quorum_policy(threshold, n)
     ah = action_hash(action)
     verdicts = verdicts or {}
     witnesses = []
@@ -280,7 +286,9 @@ class QuorumVerification:
         }
 
 
-def verify_quorum(qc, pubkeys: dict) -> QuorumVerification:
+def verify_quorum(
+    qc, pubkeys: dict, *, threshold: int = DEFAULT_THRESHOLD, n: int = DEFAULT_N,
+) -> QuorumVerification:
     """Independently re-verify a quorum certificate using the REAL engine.
 
     Re-checks EVERY witness ECDSA-P256 signature over the DSSE PAE (via the
@@ -307,7 +315,12 @@ def verify_quorum(qc, pubkeys: dict) -> QuorumVerification:
     not dicts are ignored.
 
     ``qc`` may be a :class:`QuorumCertificate` or its ``to_dict()`` form.
+    The caller owns the trusted ``threshold`` and ``n`` policy (3-of-4 by
+    default). Certificate policy fields must match it exactly; signatures bind
+    the action, not these fields. Custom policies require explicit keyword
+    arguments. Invalid caller policies raise ValueError.
     """
+    _validate_quorum_policy(threshold, n)
     if isinstance(qc, QuorumCertificate):
         qcd = qc.to_dict()
     elif isinstance(qc, dict):
@@ -315,15 +328,18 @@ def verify_quorum(qc, pubkeys: dict) -> QuorumVerification:
     else:
         # Not a certificate at all — never fabricate a quorum; fail closed.
         return QuorumVerification(
-            action_hash="", threshold=DEFAULT_THRESHOLD, n=DEFAULT_N,
+            action_hash="", threshold=threshold, n=n,
             consensus_count=0, canonical=False, checks=[],
         )
 
-    try:
-        threshold = int(qcd.get("threshold", DEFAULT_THRESHOLD))
-        n = int(qcd.get("n", DEFAULT_N))
-    except (TypeError, ValueError):
-        threshold, n = DEFAULT_THRESHOLD, DEFAULT_N
+    declared_threshold = qcd.get("threshold", threshold)
+    declared_n = qcd.get("n", n)
+    if (type(declared_threshold) is not int or type(declared_n) is not int
+            or declared_threshold != threshold or declared_n != n):
+        return QuorumVerification(
+            action_hash="", threshold=threshold, n=n,
+            consensus_count=0, canonical=False, checks=[],
+        )
 
     ah = qcd.get("action_hash")
     if not isinstance(ah, str) or not ah:
