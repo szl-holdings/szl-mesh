@@ -156,6 +156,9 @@ jobs:
           SZL_FORMATION_ID: "ci-test-formation"
           SZL_FORMATION_KEY: "ci-test-key-not-real"
 
+      - name: Verify unsigned hello example contract
+        run: python3 -m unittest discover -s tests -p test_hello_mesh_example.py -v
+
       - name: Verify doctrine constants in hello_mesh.py
         run: |
           set -euo pipefail
