@@ -162,7 +162,7 @@ class QuorumCertificate:
                 if w is not None
             ],
             # Honest labeling — never claim unconditional BFT.
-            "safety_model": "khipu-3of4-quorum (real ECDSA-P256 DSSE); "
+            "safety_model": f"khipu-{self.threshold}of{self.n}-quorum (real ECDSA-P256 DSSE); "
             "unconditional BFT safety = Conjecture 2 (NOT proven)",
             "doctrine_version": DOCTRINE_VERSION,
             "kernel_commit": KERNEL_COMMIT,
@@ -281,7 +281,7 @@ class QuorumVerification:
                 }
                 for c in self.checks
             ],
-            "safety_model": "khipu-3of4-quorum (real ECDSA-P256 DSSE); "
+            "safety_model": f"khipu-{self.threshold}of{self.n}-quorum (real ECDSA-P256 DSSE); "
             "unconditional BFT safety = Conjecture 2 (NOT proven)",
         }
 

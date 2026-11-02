@@ -54,3 +54,33 @@ def test_invalid_trusted_policy_is_rejected(threshold, n):
         Q.verify_quorum({}, {}, threshold=threshold, n=n)
     with pytest.raises(ValueError, match="quorum policy"):
         Q.propose_action("a" * 64, {}, threshold=threshold, n=n)
+
+
+@pytest.mark.parametrize("threshold,n", [(2, 3), (3, 4)])
+def test_serialized_safety_model_matches_selected_policy(threshold, n):
+    certificate, keys = _signed_certificate()
+    certificate.update(threshold=threshold, n=n)
+    certificate["witnesses"] = certificate["witnesses"][:n]
+    qc = Q.QuorumCertificate(**certificate)
+    result = Q.verify_quorum(qc, keys, threshold=threshold, n=n)
+    assert result.canonical is True
+    assert result.consensus_count == n
+    expected_label = (
+        f"khipu-{threshold}of{n}-quorum (real ECDSA-P256 DSSE); "
+        "unconditional BFT safety = Conjecture 2 (NOT proven)"
+    )
+    for serialized in (qc.to_dict(), result.to_dict()):
+        assert serialized["threshold"] == threshold
+        assert serialized["n"] == n
+        assert serialized["safety_model"] == expected_label
+
+
+def test_rejected_certificate_serializes_trusted_policy_label():
+    certificate, keys = _signed_certificate()
+    result = Q.verify_quorum(certificate, keys, threshold=2, n=3)
+    assert result.canonical is False
+    assert result.consensus_count == 0
+    serialized = result.to_dict()
+    assert serialized["threshold"] == 2
+    assert serialized["n"] == 3
+    assert serialized["safety_model"].startswith("khipu-2of3-quorum ")
