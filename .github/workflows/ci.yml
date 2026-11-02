@@ -156,6 +156,9 @@ jobs:
           SZL_FORMATION_ID: "ci-test-formation"
           SZL_FORMATION_KEY: "ci-test-key-not-real"
 
+      - name: Verify unsigned hello example contract
+        run: python3 -m unittest discover -s tests -p test_hello_mesh_example.py -v
+
       - name: Verify doctrine constants in hello_mesh.py
         run: |
           set -euo pipefail
@@ -265,6 +268,10 @@ jobs:
       - name: Run spine test
         run: |
           python3 -m pytest tests/test_spine.py -q
+
+      - name: Run node runtime and value isolation regressions
+        run: |
+          python3 -m pytest tests/test_runtime.py tests/test_receipt_signer_identity.py tests/test_crdt_value_isolation.py -q
 
   # ── SLSA L1 Provenance ──────────────────────────────────────────
   slsa-provenance:

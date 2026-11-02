@@ -9,5 +9,5 @@ grpcio-tools>=1.84.0
 # ResolutionImpossible. Aligned to grpcio-tools 1.81.1's actual protobuf requirement.
 protobuf>=7.36.2,<8.0.0
 
-# Ed25519 signing (production — replaces placeholder in hello_mesh.py)
+# Optional future enrollment/transport work; hello_mesh.py uses only stdlib.
 cryptography>=50.0.2

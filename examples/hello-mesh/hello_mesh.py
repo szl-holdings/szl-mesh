@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 """
 hello-mesh/hello_mesh.py
-Write a receipted CRDT state change to SZL-MESH (Inventions 1 & 2).
+Preview an unsigned, simulated CRDT state change (Inventions 1 & 2).
+This script does not enroll, sign, validate, publish or authorize a change.
+Unsigned-preview repair: OpenAI Codex, owner-requested repository audit.
 
 Doctrine: v11 LOCKED 749/14/163 · Kernel commit c7c0ba17 · SLSA L1
 
@@ -10,7 +12,6 @@ DCO:
   Co-Authored-By: Perplexity Computer Agent <agent@perplexity.ai>
 """
 
-import os
 import sys
 import json
 import base64
@@ -72,38 +73,25 @@ def pae(payload_type: str, payload: bytes) -> bytes:
 
 def build_dsse_envelope(stmt: dict, node_id: str) -> dict:
     """
-    Wraps the StateTransitionStatement in a DSSE envelope.
-    In production: sign pae(payload_type, payload) with Ed25519 private key.
-    This stub returns a placeholder signature for demonstration.
+    Wrap a statement in an unsigned DSSE-shaped envelope for inspection.
+
+    node_id is retained for example-call compatibility; it is not a signer
+    credential. No signature or authorization can be inferred from it.
     """
     payload_type = "application/vnd.szl.mesh.state-transition+json"
     stmt_json = json.dumps(stmt, separators=(",", ":")).encode()
     payload_b64 = base64.urlsafe_b64encode(stmt_json).decode().rstrip("=")
 
-    signing_input = pae(payload_type, stmt_json)
-
-    # TODO: replace with actual Ed25519 sign(signing_input, private_key)
-    # from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
-    # sig_bytes = private_key.sign(signing_input)
-    sig_placeholder = hashlib.sha256(signing_input).hexdigest()
-    sig_b64 = base64.urlsafe_b64encode(sig_placeholder.encode()).decode()
-
     return {
         "payloadType": payload_type,
         "payload": payload_b64,
-        "signatures": [
-            {
-                "keyid": node_id,
-                "sig": sig_b64,
-                # NOTE: placeholder — production must use real Ed25519 sig
-            }
-        ],
+        "signatures": [],
     }
 
 
 def main() -> int:
     print("=" * 60)
-    print("SZL-MESH Hello-World Example")
+    print("SZL-MESH Hello-World Example — unsigned offline preview")
     print(f"  Doctrine: {DOCTRINE_VERSION}  (Invention 1: DSSE Receipts)")
     print(f"  Kernel:   {KERNEL_COMMIT}")
     print(f"  SLSA:     {SLSA_LEVEL}")
@@ -118,7 +106,7 @@ def main() -> int:
     }).encode()
 
     change_hash = hashlib.sha256(change_data).hexdigest()
-    node_id     = hashlib.sha256(b"hello-mesh-demo-pubkey").hexdigest()
+    node_id     = "example-node-not-enrolled"
     from_heads  = ["0000000000000000000000000000000000000000000000000000000000000000"]
     to_heads    = [change_hash]
 
@@ -143,39 +131,40 @@ def main() -> int:
     # ── Wrap in DSSE envelope ─────────────────────────────────────
     envelope = build_dsse_envelope(stmt, node_id)
 
-    print("[3/4] DSSE Envelope:")
+    print("[3/4] Unsigned DSSE-shaped envelope (not a receipt):")
     print(f"      payloadType: {envelope['payloadType']}")
     print(f"      payload:     {envelope['payload'][:48]}...")
-    print(f"      keyid:       {envelope['signatures'][0]['keyid'][:16]}...")
-    print(f"      sig:         {envelope['signatures'][0]['sig'][:32]}...")
-    print(f"      NOTE: sig is a placeholder — production requires real Ed25519")
+    print(f"      signatures:  {envelope['signatures']}")
+    print("      No signer or signature is available in this example.")
     print()
 
     # ── Describe two-track classification ────────────────────────
     print("[4/4] Two-Track State (Invention 2):")
-    print("      With a valid Ed25519 signature (production), this change")
-    print("      passes Receipt Gate validation and appears on:")
-    print("        AUTHORIZED track → GetAuthorizedPlatforms RPC")
-    print("        Rosie: solid indicator — actionable for command decisions")
-    print()
-    print("      Without valid signature (this demo):")
-    print("        OBSERVED track  → GetObservedPlatforms RPC")
-    print("        Rosie: dashed indicator — situational awareness only")
+    print("      This simulated, unsigned change stays OBSERVED.")
+    print("      No Receipt Gate, RPC or cockpit has been queried.")
+    print("      It cannot authorize command decisions.")
     print()
 
     print("=" * 60)
-    print("Sentra governance event would emit (Invention 7):")
+    print("Sentra event preview (not emitted; no gate evaluation):")
     sentra_event = {
         "event_type": "szl_mesh_state_transition",
         "formation_id": "hello-formation-001",
         "change_hash": change_hash,
-        "receipt_status": "AUTHORIZED",  # if sig were real
-        "corroboration_status": "PENDING",
-        "track": "AUTHORIZED",
+        "receipt_status": "RECEIPT_MISSING",
+        "corroboration_status": "CORROBORATION_STATUS_UNSPECIFIED",
+        "track": "OBSERVED",
         "transition_class": "PLATFORM_STATUS",
         "doctrine_version": DOCTRINE_VERSION,
         "kernel_commit": KERNEL_COMMIT,
-        "latency_ms": 0,
+        # No measurement was made: omit the int64 rather than inventing 0 ms.
+        "labels": {
+            "simulated": "true",
+            "published": "false",
+            "latency_status": "UNAVAILABLE",
+            "receipt_evaluated": "false",
+            "corroboration_evaluated": "false",
+        },
     }
     print(json.dumps(sentra_event, indent=2))
     print("=" * 60)
