@@ -20,6 +20,7 @@ claim here (Khipu BFT unconditional = Conjecture 2); quorum is Dev 2's lane.
 
 from __future__ import annotations
 
+from copy import deepcopy
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -125,7 +126,8 @@ class MeshNode:
             transition_class=transition_class,
         )
         envelope = rcpt.build_dsse_receipt(stmt, self._priv)
-        self.receipt_ledger[change_hash] = envelope
+        # The returned broadcast record belongs to the caller, not the ledger.
+        self.receipt_ledger[change_hash] = deepcopy(envelope)
 
         gate = self._classify(op, envelope)
         self.doc.set_op_track(change_hash, gate.track)
@@ -158,7 +160,12 @@ class MeshNode:
         Returns this node's local classification (may match or differ on skew).
         """
         op: Op = record["op_obj"]
-        envelope = record.get("receipt")
+        # Classify and retain one owned snapshot, independent of the sender.
+        try:
+            envelope = deepcopy(record.get("receipt"))
+        except RecursionError:
+            # Unretainable evidence cannot authorize an otherwise visible op.
+            envelope = None
         # Advance Lamport clock to preserve causal ordering across the mesh.
         self._tick(op.lamport)
         newly = self.doc.add_op(

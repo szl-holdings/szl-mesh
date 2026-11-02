@@ -17,5 +17,5 @@ jobs:
         with:
           python-version: "3.11"
       - run: python -m pip install -e . pytest
-      - name: Verify malformed receipts and real signer identity
-        run: python -m pytest -q tests/test_receipt_shapes.py tests/test_receipt_signer_identity.py tests/test_runtime.py
+      - name: Verify receipt shape, signer identity, and retained history
+        run: python -m pytest -q tests/test_receipt_shapes.py tests/test_receipt_signer_identity.py tests/test_runtime.py tests/test_receipt_value_isolation.py
