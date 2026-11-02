@@ -28,7 +28,8 @@ from __future__ import annotations
 
 import hashlib
 import json
-from dataclasses import dataclass, field
+from copy import deepcopy
+from dataclasses import dataclass, field, replace
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 # Track labels (mirror proto TrackStatus).
@@ -82,6 +83,11 @@ class Op:
     deletion: bool = False
     track: str = OBSERVED  # set by the Node runtime after receipt validation
 
+    def __post_init__(self) -> None:
+        # frozen=True prevents field assignment, not mutation of nested JSON.
+        # Bind this operation to the caller's value at construction time.
+        object.__setattr__(self, "value", deepcopy(self.value))
+
     @property
     def op_id(self) -> str:
         return compute_op_id(
@@ -115,7 +121,7 @@ class Op:
         return {
             "doc_id": self.doc_id,
             "key": self.key,
-            "value": self.value,
+            "value": deepcopy(self.value),
             "lamport": self.lamport,
             "node_id": self.node_id,
             "deletion": self.deletion,
@@ -159,7 +165,8 @@ class CRDTDocument:
             )
         if op.op_id in self._ops:
             return False
-        self._ops[op.op_id] = op
+        # Never retain the caller's mutable operation value inside the log.
+        self._ops[op.op_id] = replace(op)
         return True
 
     def set_op_track(self, op_id: str, track: str) -> None:
@@ -216,7 +223,7 @@ class CRDTDocument:
             op = winners[key]
             if op.deletion:
                 continue
-            out[key] = op.value
+            out[key] = deepcopy(op.value)
         return out
 
     def authorized_view(self) -> Dict[str, Any]:
@@ -253,8 +260,8 @@ class CRDTDocument:
         return hashlib.sha256(_canonical(self.view(track))).hexdigest()
 
     def all_ops(self) -> List[Op]:
-        """All ops in deterministic order (for sync / export)."""
-        return [self._ops[k] for k in sorted(self._ops)]
+        """Detached op snapshots in deterministic order (for sync / export)."""
+        return [replace(self._ops[k]) for k in sorted(self._ops)]
 
     def __len__(self) -> int:
         return len(self._ops)
