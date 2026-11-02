@@ -140,7 +140,11 @@ class MeshNode:
 
     def _classify(self, op: Op, envelope: Optional[Dict[str, Any]]):
         """Run the Receipt Gate for an op against this node's known state."""
-        registry = self._gateway.pubkey_registry() if self._gateway else None
+        # Audit repair: OpenAI Codex for the owner's repository review.
+        # None selects the low-level receipt check's self-consistency mode.
+        # Runtime AUTHORIZED state instead requires a known enrolled signer;
+        # an unenrolled node has an empty trust registry, not implicit trust.
+        registry = self._gateway.pubkey_registry() if self._gateway else {}
         revoked = self._gateway.revoked if self._gateway else set()
         return rcpt.validate_receipt(
             receipt=envelope,

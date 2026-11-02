@@ -239,6 +239,24 @@ jobs:
       - name: Verify quorum policy and signature regressions
         run: python -m pytest tests/test_quorum.py tests/test_quorum_policy.py -q
 
+  # Origin: OpenAI Codex, enrollment/receiver-trust audit regression coverage.
+  test-runtime-trust:
+    name: Runtime enrollment and receipt trust
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0
+        with:
+          python-version: "3.11"
+      - name: Install package and test runner
+        run: python -m pip install -e . pytest
+      - name: Verify enrollment and receipt trust boundaries
+        run: >-
+          python -m pytest tests/test_runtime.py tests/test_receipt_shapes.py
+          tests/test_receipt_signer_identity.py tests/test_enrollment_trust.py -q
+
   # ── PCGI Spine Test ──────────────────────────────────────────────
   # Verifies the canonical szl-receipt fold (src/szl_mesh/spine.py, T302):
   # a mesh state transition emits ONE szl-receipt binding subject + input
