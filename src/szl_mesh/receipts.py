@@ -180,10 +180,14 @@ def verify_receipt_signature(receipt: Dict[str, Any]) -> bool:
     the signature and signer identity are self-consistent.
     """
     try:
+        if not isinstance(receipt, dict) or not isinstance(receipt.get("payloadType"), str):
+            return False
         signatures = receipt["signatures"]
         if not isinstance(signatures, list) or len(signatures) != 1:
             return False
         sig_entry = signatures[0]
+        if not isinstance(sig_entry, dict):
+            return False
         if sig_entry.get("sig_alg") != "ECDSA-P256-SHA256":
             return False
         payload_b64 = receipt["payload"]
@@ -206,7 +210,7 @@ def verify_receipt_signature(receipt: Dict[str, Any]) -> bool:
         sig = _b64url_decode(sig_entry["sig"])
         pub.verify(sig, signing_input, ec.ECDSA(hashes.SHA256()))
         return True
-    except (InvalidSignature, KeyError, ValueError, TypeError, UnicodeDecodeError, json.JSONDecodeError):
+    except (InvalidSignature, KeyError, ValueError, TypeError, UnicodeDecodeError, RecursionError):
         return False
 
 
@@ -235,7 +239,7 @@ def validate_receipt(
     revoked_node_ids = revoked_node_ids or set()
     now_utc = now_utc or datetime.now(timezone.utc)
 
-    if receipt is None:
+    if not isinstance(receipt, dict):
         return GateResult(OBSERVED, RECEIPT_MISSING, None)
 
     # 1-2. payloadType
@@ -244,7 +248,9 @@ def validate_receipt(
 
     try:
         stmt = decode_statement(receipt)
-    except (ValueError, KeyError):
+    except (ValueError, KeyError, TypeError, UnicodeError, RecursionError):
+        return GateResult(OBSERVED, RECEIPT_MISSING, None)
+    if not isinstance(stmt, dict):
         return GateResult(OBSERVED, RECEIPT_MISSING, None)
 
     # 4. doctrine
@@ -255,8 +261,11 @@ def validate_receipt(
         return GateResult(OBSERVED, RECEIPT_WRONG_KERNEL, stmt)
 
     # Section 889 invariant: exactly 5 vendors.
-    vendors = stmt.get("policy_context", {}).get("section_889_vendors", [])
-    if list(vendors) != list(SECTION_889_VENDORS):
+    policy_context = stmt.get("policy_context")
+    if not isinstance(policy_context, dict):
+        return GateResult(OBSERVED, RECEIPT_BAD_VENDORS, stmt)
+    vendors = policy_context.get("section_889_vendors")
+    if not isinstance(vendors, list) or vendors != SECTION_889_VENDORS:
         return GateResult(OBSERVED, RECEIPT_BAD_VENDORS, stmt)
 
     # 6-7. signature and signer identity binding
@@ -285,7 +294,7 @@ def validate_receipt(
         ts = datetime.strptime(stmt["timestamp_utc"], "%Y-%m-%dT%H:%M:%SZ").replace(
             tzinfo=timezone.utc
         )
-    except (ValueError, KeyError):
+    except (ValueError, KeyError, TypeError):
         return GateResult(OBSERVED, RECEIPT_CLOCK_SKEW, stmt)
     if abs((now_utc - ts).total_seconds()) > clock_skew_seconds:
         return GateResult(OBSERVED, RECEIPT_CLOCK_SKEW, stmt)

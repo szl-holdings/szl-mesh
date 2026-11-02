@@ -156,6 +156,9 @@ jobs:
           SZL_FORMATION_ID: "ci-test-formation"
           SZL_FORMATION_KEY: "ci-test-key-not-real"
 
+      - name: Verify unsigned hello example contract
+        run: python3 -m unittest discover -s tests -p test_hello_mesh_example.py -v
+
       - name: Verify doctrine constants in hello_mesh.py
         run: |
           set -euo pipefail
@@ -223,6 +226,21 @@ jobs:
 
           print(f"OK: SECTION_889_VENDORS = {vendors}")
           PYEOF
+
+  test-quorum:
+    name: Quorum policy and signatures
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0
+        with:
+          python-version: "3.11"
+      - name: Install package and test runner
+        run: python -m pip install -e . pytest
+      - name: Verify quorum policy and signature regressions
+        run: python -m pytest tests/test_quorum.py tests/test_quorum_policy.py -q
 
   # ── PCGI Spine Test ──────────────────────────────────────────────
   # Verifies the canonical szl-receipt fold (src/szl_mesh/spine.py, T302):
