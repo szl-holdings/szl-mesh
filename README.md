@@ -570,3 +570,5 @@ How the mesh *relates* to (does not equal) that primitive:
 advisory, *never* a proven theorem. Khipu BFT is **Conjecture 2**. `energy` is the literal
 `"UNAVAILABLE"` sentinel — the mesh measures no joules and fabricates none, so this flow
 makes **no** perpetual-motion or zero-cost claim.
+
+Estate on Hugging Face: models, datasets and Spaces are published under the [SZLHOLDINGS](https://huggingface.co/SZLHOLDINGS) org.
