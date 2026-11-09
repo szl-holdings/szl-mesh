@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<meta name="theme-color" content="#04070d"/>
+<title>SZL Living Anatomy — the organism, live from the chain</title>
+<style>
+:root{--bg:#04070d;--ink:#e8f0fa;--mut:#8fa3bd;--cy:#5ce8de;--gd:#f0cf6e;--rd:#ff7b93;--gr:#69e8a0}
+*{box-sizing:border-box}
+html,body{margin:0;background:radial-gradient(ellipse 80% 50% at 50% -10%,#0a2230 0%,var(--bg) 60%);color:var(--ink);font:15px/1.6 system-ui,-apple-system,"Segoe UI",sans-serif}
+main{max-width:1080px;margin:0 auto;padding:clamp(16px,4vw,52px)}
+h1{font-size:clamp(24px,5vw,44px);line-height:1.08;margin:.25em 0}
+.k{font:600 11px/1.7 ui-monospace,monospace;letter-spacing:.24em;color:var(--gd)}
+.mut{color:var(--mut);font-size:13px}
+a{color:var(--cy)}
+.grid{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));margin-top:22px}
+.card{border:1px solid #1d2c44;background:linear-gradient(180deg,#0a1322,#070d18);border-radius:16px;padding:18px;box-shadow:0 18px 60px #0006}
+.stat{font-size:clamp(24px,4vw,38px);font-weight:800;background:linear-gradient(90deg,var(--cy),var(--gd));-webkit-background-clip:text;background-clip:text;color:transparent}
+.lbl{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--mut)}
+table{width:100%;border-collapse:collapse;font-size:13px;margin-top:10px}
+td,th{padding:7px 8px;border-bottom:1px solid #16233a;text-align:left}
+th{color:var(--mut);font-size:10px;letter-spacing:.12em;text-transform:uppercase}
+.pass{color:var(--gr);font-weight:700}.fail{color:var(--rd);font-weight:700}
+.node-dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px;vertical-align:1px}
+.run{background:var(--gr)}.dep{background:var(--gd)}.stop{background:var(--mut)}
+footer{margin-top:40px;border-top:1px solid #16233a;padding-top:14px;font-size:12px;color:var(--mut)}
+@keyframes pulse{0%,100%{opacity:.5}50%{opacity:1}}
+.live{animation:pulse 2s infinite}
+</style>
+</head>
+<body>
+<main>
+  <p class="k">SZL HOLDINGS · THE LIVING ANATOMY · LIVE FROM THE PUBLIC CHAIN</p>
+  <h1>The organism, rendered from its receipts.</h1>
+  <p class="mut live">● Every number on this page is fetched at load time from the public hash-chained receipts dataset. Nothing cached. Nothing claimed. When the chain is unreachable, this page fails closed. <a href="https://huggingface.co/datasets/SZLHOLDINGS/frontier-54-runs">The chain →</a></p>
+
+  <div class="grid">
+    <div class="card"><div class="stat" id="receipts"><span class="ring" style="display:inline-block;width:12px;height:12px;border:2px solid var(--cy);border-top-color:transparent;border-radius:50%;animation:spin 1s linear infinite"></span></div><div class="lbl">receipts in the public chain</div></div>
+    <div class="card"><div class="stat" id="nodes">—</div><div class="lbl">mesh nodes (roles wired)</div></div>
+    <div class="card"><div class="stat" id="brain">—</div><div class="lbl">brain battery (latest cycle)</div></div>
+    <div class="card"><div class="stat" id="joules">—</div><div class="lbl">joules measured (latest cycle)</div></div>
+  </div>
+  <style>@keyframes spin{to{transform:rotate(360deg)}}</style>
+
+  <h2 class="k" style="margin-top:34px">THE MESH — organs feeding organs</h2>
+  <div class="card"><table id="meshtable"></table>
+  <p class="mut">Feed-in: every node publishes receipts → the brain ingests the chain as curriculum. Feed-back: the brain's battery-gated checkpoints → nodes pin the version they run. The bus is public: all inter-node traffic is auditable, permanently.</p></div>
+
+  <h2 class="k" style="margin-top:34px">THE CENSUS — measured honesty across labs</h2>
+  <div class="card"><table id="censustable"></table></div>
+
+  <h2 class="k" style="margin-top:34px">THE CHAIN — latest receipts</h2>
+  <div class="card"><table id="chaintable"></table></div>
+
+  <footer>SZL Holdings is a living anatomy: a mesh of GPU nodes, a self-rewarding brain, and a public receipt chain — each part the proof of the others. Trust is not a promise here. It's the circulatory system. · <a href="/api/receipts">/api/receipts</a> · <a href="/api/mesh">/api/mesh</a> · reproduce: pip install fastapi uvicorn; uvicorn app:app</footer>
+</main>
+<script>
+const esc = s => String(s).replace(/[&<>"]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+fetch("/api/receipts").then(r=>r.json()).then(d=>{
+  document.getElementById("receipts").textContent = d.count;
+  const t = document.getElementById("chaintable");
+  t.innerHTML = "<tr><th>receipt</th><th>schema</th><th>verdict / key</th></tr>" +
+    d.receipts.slice(-8).reverse().map(r=>{
+      const dd = r.data || {};
+      const key = dd.battery ? (dd.battery.verdict || dd.battery.pass+"/"+dd.battery.of)
+                : dd.reward ? (dd.reward.rewarded ? "REWARDED" : "no reward")
+                : (dd.schema || "—");
+      return `<tr><td class="mut">${esc(r.path)}</td><td>${esc(dd.schema||"—")}</td><td>${esc(key)}</td></tr>`;
+    }).join("");
+}).catch(()=>{ document.getElementById("receipts").textContent = "503"; });
+fetch("/api/mesh").then(r=>r.json()).then(m=>{
+  document.getElementById("nodes").textContent = m.nodes.length;
+  const t = document.getElementById("meshtable");
+  t.innerHTML = "<tr><th>node</th><th>role</th><th>status</th><th>feeds</th><th>consumes</th></tr>" +
+    m.nodes.map(n=>`<tr><td><span class="node-dot ${n.status==='running'?'run':(n.status==='deploying'?'dep':'stop')}"></span><b>${esc(n.id)}</b></td>
+      <td>${esc(n.role)}</td><td class="mut">${esc(n.status)}</td>
+      <td class="mut">${esc((n.feeds||[]).join(", ")||"—")}</td><td class="mut">${esc((n.consumes||[]).join(", ")||"—")}</td></tr>`).join("");
+}).catch(()=>{ document.getElementById("nodes").textContent = "503"; });
+fetch("/api/brain").then(r=>r.json()).then(b=>{
+  const c = b.latest_cycle_receipt;
+  if (c && c.battery) {
+    document.getElementById("brain").textContent = c.battery.pass + "/" + c.battery.of;
+    document.getElementById("joules").textContent = (c.joules_measured||"—") + " J";
+  } else {
+    document.getElementById("brain").textContent = "—";
+    document.getElementById("joules").textContent = "—";
+  }
+}).catch(()=>{ document.getElementById("brain").textContent = "503"; });
+fetch("/api/census").then(r=>r.json()).then(d=>{
+  const t = document.getElementById("censustable");
+  let rows = "<tr><th>model</th><th>abstain</th><th>verdict</th></tr>";
+  for (const leg of d.legs||[]) for (const run of leg.runs||[])
+    rows += `<tr><td><b>${esc(run.model)}</b></td><td>${run.abstained}/${run.probes_valid||6}</td>
+      <td class="${run.verdict==='PASS'?'pass':'fail'}">${esc(run.verdict)}</td></tr>`;
+  t.innerHTML = rows;
+}).catch(()=>{ document.getElementById("censustable").innerHTML =
+  "<tr><td class='mut'>census unreachable — failing closed</td></tr>"; });
+</script>
+</body>
+</html>
