@@ -115,6 +115,71 @@ def hi_rag(query: str) -> dict:
         out["L3_receipts"] = []
     return out
 
+
+
+# ---------------- ADAP-KHIPU BRIDGE: delegated authority x measured honesty ----------------
+# Adopted from Hardalion/ADAP (Apache-2.0) v0.1: attenuated delegation, signed
+# intent, deterministic policy, portable receipts. Our addition: the HONESTY GATE —
+# REQUIRE_HUMAN also triggers when an honesty-critical task routes to a model whose
+# measured census/proving score is below threshold. Authority is deterministic
+# (ADAP); honesty is measured (SZL). Both are receipted.
+
+DELEGATIONS = {}  # agent -> grant dict
+
+def delegate(principal: str, agent: str, grant: dict, parent_agent: str = None):
+    """ADAP-style attenuated delegation: a child grant can never exceed its parent's."""
+    if parent_agent:
+        pg = DELEGATIONS.get(parent_agent)
+        if not pg:
+            raise ValueError("fail closed: parent grant not found")
+        for k, v in grant.items():
+            if isinstance(v, (int, float)) and isinstance(pg.get(k), (int, float)):
+                if v > pg[k]:
+                    raise ValueError(f"fail closed: child raises {k} above parent bound ({v} > {pg[k]}) — BLOCK, no execution")
+    grant = {"principal": principal, **grant}
+    DELEGATIONS[agent] = grant
+    return grant
+
+HONESTY_CRITICAL = {"cite", "prove", "formula", "exact", "doi", "citation", "compliance", "diagnosis"}
+HONESTY_THRESHOLD = 0.6  # census abstention rate required for honesty-critical tasks
+
+def adap_policy(agent: str, tool: str, args: dict, honesty_registry: dict = None) -> dict:
+    """Deterministic decision: ALLOW / REQUIRE_HUMAN / BLOCK. No model decides.
+    The honesty gate: honesty-critical tools require a measured-honest model."""
+    grant = DELEGATIONS.get(agent)
+    if not grant:
+        return {"action": "BLOCK", "rule": "no_grant", "executed": False}
+    # attenuation check: every numeric arg must be within the grant bound
+    for k, v in args.items():
+        if k in grant and isinstance(grant[k], (int, float)) and isinstance(v, (int, float)):
+            if v > grant[k]:
+                return {"action": "BLOCK", "rule": f"exceeds_bound:{k}", "executed": False}
+    # ADAP: purchase/apply always needs the human
+    if tool in ("purchase", "apply", "sign"):
+        return {"action": "REQUIRE_HUMAN", "rule": "human_approval", "executed": False}
+    # THE HONESTY GATE (ours): honesty-critical read/answer tools check the model's measured score
+    if tool in ("answer", "cite", "verify") and honesty_registry:
+        model = args.get("model")
+        score = honesty_registry.get(model, {}).get("honesty_axis1_census", 0)
+        task = str(args.get("task", "")).lower()
+        if any(w in task for w in HONESTY_CRITICAL) and score < HONESTY_THRESHOLD:
+            return {"action": "REQUIRE_HUMAN", "rule": f"honesty_gate: model {model} measured {score} < {HONESTY_THRESHOLD}",
+                    "executed": False}
+    return {"action": "ALLOW", "rule": "within_grant", "executed": True}
+
+def adap_receipt(agent: str, tool: str, args: dict, decision: dict, prev_sha: str, chain: Chain) -> dict:
+    """The AdapKhipu receipt: ADAP fields (principal, grant, intent, decision) +
+    our chain. Refusals are receipted too — a BLOCK is a public record."""
+    grant = DELEGATIONS.get(agent, {})
+    row = {"schema": "szl.adap-khipu/v1", "agent": agent,
+           "principal": grant.get("principal"), "tool": tool,
+           "intent": {k: args.get(k) for k in sorted(args)},
+           "decision": decision["action"], "rule": decision["rule"],
+           "executed": decision["executed"],
+           "note": "authority deterministic (ADAP semantics); honesty measured (SZL census); both receipted"}
+    rec = chain.receipt(row, prev_sha)
+    return rec
+
 if __name__ == "__main__":
     # smoke: a 3-step DAG through the kernel
     chain = Chain("smoke")
