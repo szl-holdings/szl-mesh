@@ -38,6 +38,21 @@ The lower-level `validate_receipt(..., pubkey_registry=None)` mode does not
 establish membership in a trusted formation. Runtime callers always supply a
 registry, including an empty registry before enrollment.
 
+`MeshNode` also binds the signed document and signer to the operation's
+`doc_id` and `node_id`. This runtime has no delegated-signing mechanism:
+an enrolled peer cannot authorize an operation attributed to another node.
+Validly signed statements with a different document or author remain
+`OBSERVED` with `CONTEXT_MISMATCH`; malformed type, document ID, transition
+class, head lists or SLSA level remain `OBSERVED` with `BAD_STATEMENT`.
+The operation and its signature remain available for inspection.
+
+Direct callers of `validate_receipt` can supply `expected_document_id` and
+`expected_node_id` as keyword arguments. Those expectations must come from
+the operation or the caller's trusted context, not from the receipt itself.
+Omitting them preserves byte-level validation without application-context
+binding. Head-list validation checks strings and list shape only; it does
+not prove causal history or require sender and receiver heads to match.
+
 This remains an in-process reference runtime: the certificate store and
 revocations are held in memory, and this change does not implement the planned
 Formation CA, durable enrollment, proof of key possession or transport security.
