@@ -159,9 +159,10 @@ class MeshNode:
     # ── receive a remote op + receipt ────────────────────────────────
     def apply_remote(self, record: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Apply a peer's broadcast record: merge the op (CRDT union), store the
-        receipt, and independently re-classify via this node's Receipt Gate.
-        Returns this node's local classification (may match or differ on skew).
+        Merge a peer's op, and independently classify the incoming evidence.
+        Invalid replay can preserve prior authority only if the retained
+        receipt still passes the current gate. Return both the effective local
+        classification and the incoming evidence's validation status.
         """
         op: Op = record["op_obj"]
         # Classify and retain one owned snapshot, independent of the sender.
@@ -170,6 +171,8 @@ class MeshNode:
         except RecursionError:
             # Unretainable evidence cannot authorize an otherwise visible op.
             envelope = None
+        change_hash = op.op_id
+        previous_track = self.doc.op_track(change_hash)
         # Advance Lamport clock to preserve causal ordering across the mesh.
         self._tick(op.lamport)
         newly = self.doc.add_op(
@@ -182,14 +185,31 @@ class MeshNode:
                 deletion=op.deletion,
             )
         )
-        if envelope is not None:
-            self.receipt_ledger[op.op_id] = envelope
-        gate = self._classify(op, envelope)
-        self.doc.set_op_track(op.op_id, gate.track)
+        incoming_gate = self._classify(op, envelope)
+        gate = incoming_gate
+        used_retained_receipt = False
+        # Origin: OpenAI Codex, implementing the owner's repository audit.
+        # A replay does not erase retained evidence or inherit authority from
+        # an untrusted label. Prior local authority only selects evidence for
+        # a fresh check against the current registry, revocations and clock.
+        if incoming_gate.track == AUTHORIZED:
+            self.receipt_ledger[change_hash] = envelope
+        else:
+            retained = self.receipt_ledger.get(change_hash)
+            if previous_track == AUTHORIZED and retained is not None:
+                gate = self._classify(op, retained)
+                used_retained_receipt = gate.track == AUTHORIZED
+            if retained is None and envelope is not None:
+                # Keep first observed evidence for inspection, until valid
+                # re-issuance replaces it; do not retain every rejected replay.
+                self.receipt_ledger[change_hash] = envelope
+        self.doc.set_op_track(change_hash, gate.track)
         return {
             "newly_added": newly,
             "track": gate.track,
             "receipt_status": gate.receipt_status,
+            "incoming_receipt_status": incoming_gate.receipt_status,
+            "used_retained_receipt": used_retained_receipt,
         }
 
     # ── views ────────────────────────────────────────────────────────
