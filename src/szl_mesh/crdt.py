@@ -184,6 +184,11 @@ class CRDTDocument:
             track=track,
         )
 
+    def op_track(self, op_id: str) -> Optional[str]:
+        """Return a local classification without exposing mutable op values."""
+        existing = self._ops.get(op_id)
+        return existing.track if existing is not None else None
+
     def merge(self, other: "CRDTDocument") -> int:
         """
         Merge another document's op-log into this one (set union).
