@@ -42,6 +42,31 @@ This remains an in-process reference runtime: the certificate store and
 revocations are held in memory, and this change does not implement the planned
 Formation CA, durable enrollment, proof of key possession or transport security.
 
+## Replay and retained evidence
+
+Origin: OpenAI Codex, implementing the owner's repository audit.
+
+Invalid or missing evidence in a replay cannot replace the receipt already
+retained for that operation. If the operation was locally `AUTHORIZED`, the
+runtime revalidates its retained receipt against the current gate before
+preserving authority. Expiry, revocation, lost enrollment trust, tampering or
+a content-hash mismatch therefore still downgrade the operation. An incoming
+peer's track label never grants authority, and cached evidence alone cannot
+upgrade a previously `OBSERVED` operation; valid re-issuance is required.
+
+`apply_remote` reports the effective stored classification in `track` and
+`receipt_status`, the incoming evidence's result in `incoming_receipt_status`,
+and whether valid retained evidence preserved authority in
+`used_retained_receipt`. Valid re-issuance replaces retained evidence; rejected
+replay does not. The ledger keeps first evidence until valid replacement, not
+an append-only history of every rejected delivery.
+
+This implements fresh validation on replay under spec/02 sections 2 and 3.
+Its design-only section 8's immutable-authorization wording does not turn
+an expired receipt into permanent authority. Read APIs still return stored
+classifications without proactively revalidating between received records;
+`verify_ledger` establishes signature self-consistency, not current admission.
+
 ## Doctrine
 
 v11 LOCKED `749/14/163` @ `c7c0ba17`, SLSA L1. Section 889 vendors exactly 5.
