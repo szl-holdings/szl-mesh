@@ -140,7 +140,13 @@ class MeshNode:
             "receipt_status": gate.receipt_status,
         }
 
-    def _classify(self, op: Op, envelope: Optional[Dict[str, Any]]):
+    def _classify(
+        self,
+        op: Op,
+        envelope: Optional[Dict[str, Any]],
+        *,
+        now_utc: Optional[datetime] = None,
+    ):
         """Run the Receipt Gate for an op against this node's known state."""
         # Audit repair: OpenAI Codex for the owner's repository review.
         # None selects the low-level receipt check's self-consistency mode.
@@ -151,7 +157,7 @@ class MeshNode:
         return rcpt.validate_receipt(
             receipt=envelope,
             change_raw_bytes=op.raw_bytes(),
-            now_utc=datetime.now(timezone.utc),
+            now_utc=now_utc if now_utc is not None else datetime.now(timezone.utc),
             revoked_node_ids=revoked,
             pubkey_registry=registry,
         )
@@ -213,17 +219,41 @@ class MeshNode:
         }
 
     # ── views ────────────────────────────────────────────────────────
+    def _refresh_authorized(self) -> None:
+        """Downgrade stale authority before exposing an actionable view.
+
+        A read never upgrades OBSERVED evidence. Valid incoming re-issuance
+        remains the only runtime path for restoring lost authority.
+        """
+        # Origin: OpenAI Codex, implementing the owner's repository audit.
+        now_utc = datetime.now(timezone.utc)
+        for op in self.doc.all_ops():
+            if op.track == AUTHORIZED:
+                gate = self._classify(
+                    op, self.receipt_ledger.get(op.op_id), now_utc=now_utc
+                )
+                if gate.track != AUTHORIZED:
+                    self.doc.set_op_track(op.op_id, gate.track)
+
     def authorized_state(self) -> Dict[str, Any]:
+        """Return state whose retained evidence passes the current gate."""
+        self._refresh_authorized()
         return self.doc.authorized_view()
 
     def observed_state(self) -> Dict[str, Any]:
         return self.doc.observed_view()
 
     def state_digest(self, track: str = OBSERVED) -> str:
+        if track == AUTHORIZED:
+            self._refresh_authorized()
         return self.doc.state_digest(track)
 
     def verify_ledger(self) -> Tuple[int, int]:
-        """Re-verify every receipt in the ledger. Returns (valid, total)."""
+        """Count cryptographically valid signatures, not current admission.
+
+        Returns (valid, total), including signatures on stale or revoked
+        evidence. Use authorized_state() for the current runtime gate view.
+        """
         valid = 0
         for env in self.receipt_ledger.values():
             if rcpt.verify_receipt_signature(env):
