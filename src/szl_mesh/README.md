@@ -61,11 +61,22 @@ and whether valid retained evidence preserved authority in
 replay does not. The ledger keeps first evidence until valid replacement, not
 an append-only history of every rejected delivery.
 
-This implements fresh validation on replay under spec/02 sections 2 and 3.
-Its design-only section 8's immutable-authorization wording does not turn
-an expired receipt into permanent authority. Read APIs still return stored
-classifications without proactively revalidating between received records;
-`verify_ledger` establishes signature self-consistency, not current admission.
+This implements fresh validation under spec/02 sections 2 and 3. Its
+design-only section 8's immutable-authorization wording does not turn an
+expired receipt into permanent authority. `MeshNode.authorized_state()` and
+`MeshNode.state_digest(AUTHORIZED)` revalidate each currently authorized
+operation's retained evidence before returning, using one UTC instant for
+the read. Failed checks downgrade to `OBSERVED` without changing operation
+bytes or retained evidence. These reads never promote an observed operation,
+even if the clock or trust configuration is restored.
+
+The lower-level `CRDTDocument` only stores classifications; it has no gateway
+or receipt policy and is not an admission boundary. `verify_ledger` counts
+signature self-consistency, including expired or revoked receipts, rather
+than current authority. A successful read is a point-in-time view, not an
+execution lease, durable revocation mechanism or atomic policy snapshot
+against concurrent gateway mutation. The existing human-confirmation policy
+for command decisions still applies.
 
 ## Doctrine
 
