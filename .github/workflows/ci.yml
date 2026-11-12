@@ -258,7 +258,8 @@ jobs:
       - name: Verify enrollment and receipt trust boundaries
         run: >-
           python -m pytest tests/test_runtime.py tests/test_receipt_shapes.py
-          tests/test_receipt_signer_identity.py tests/test_enrollment_trust.py -q
+          tests/test_receipt_signer_identity.py tests/test_enrollment_trust.py
+          tests/test_receipt_operation_binding.py -q
 
   # ── PCGI Spine Test ──────────────────────────────────────────────
   # Verifies the canonical szl-receipt fold (src/szl_mesh/spine.py, T302):

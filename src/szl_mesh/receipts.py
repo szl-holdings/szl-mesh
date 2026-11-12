@@ -57,6 +57,8 @@ RECEIPT_REVOKED = "REVOKED"
 RECEIPT_CLOCK_SKEW = "CLOCK_SKEW"
 RECEIPT_HASH_MISMATCH = "HASH_MISMATCH"
 RECEIPT_BAD_VENDORS = "SECTION_889_VENDOR_COUNT"
+RECEIPT_BAD_STATEMENT = "BAD_STATEMENT"
+RECEIPT_CONTEXT_MISMATCH = "CONTEXT_MISMATCH"
 
 _B64 = "base64url"
 
@@ -228,11 +230,17 @@ def validate_receipt(
     revoked_node_ids: Optional[set] = None,
     clock_skew_seconds: int = 5,
     pubkey_registry: Optional[Dict[str, bytes]] = None,
+    *,
+    expected_document_id: Optional[str] = None,
+    expected_node_id: Optional[str] = None,
 ) -> GateResult:
     """
     Doctrine Receipt Gate (spec/01 §5 + spec/02 §3).
     Returns AUTHORIZED only if EVERY check passes; otherwise OBSERVED with a
     reason. The CRDT change is never dropped — track is advisory.
+    Callers that know the operation context should supply its document and
+    author independently of the receipt. Without those expectations, this
+    byte-level helper cannot establish the application's context binding.
     """
     from .crdt import AUTHORIZED, OBSERVED  # local import to avoid cycle
 
@@ -268,6 +276,27 @@ def validate_receipt(
     if not isinstance(vendors, list) or vendors != SECTION_889_VENDORS:
         return GateResult(OBSERVED, RECEIPT_BAD_VENDORS, stmt)
 
+    # Origin: OpenAI Codex, implementing the owner's repository audit.
+    # A valid signature does not establish that the signed statement follows
+    # the schema. Heads are shape-checked, not compared to a receiver's local
+    # heads: a legitimate concurrent receiver can have different history.
+    document_id = stmt.get("crdt_document_id")
+    transition_class = stmt.get("transition_class")
+    heads = (stmt.get("from_state_head"), stmt.get("to_state_head"))
+    if (
+        stmt.get("type") != STATEMENT_TYPE
+        or not isinstance(document_id, str) or not document_id
+        or not isinstance(transition_class, str)
+        or transition_class not in TRANSITION_CLASSES
+        or policy_context.get("slsa_level") != SLSA_LEVEL
+        or any(
+            not isinstance(values, list)
+            or any(not isinstance(head, str) or not head for head in values)
+            for values in heads
+        )
+    ):
+        return GateResult(OBSERVED, RECEIPT_BAD_STATEMENT, stmt)
+
     # 6-7. signature and signer identity binding
     if not verify_receipt_signature(receipt):
         return GateResult(OBSERVED, RECEIPT_BAD_SIGNATURE, stmt)
@@ -288,6 +317,13 @@ def validate_receipt(
     # 9. change_hash matches the raw change chunk
     if hashlib.sha256(change_raw_bytes).hexdigest() != stmt.get("change_hash"):
         return GateResult(OBSERVED, RECEIPT_HASH_MISMATCH, stmt)
+
+    if (
+        expected_document_id is not None and document_id != expected_document_id
+    ) or (
+        expected_node_id is not None and node_id != expected_node_id
+    ):
+        return GateResult(OBSERVED, RECEIPT_CONTEXT_MISMATCH, stmt)
 
     # 10. timestamp within skew window
     try:

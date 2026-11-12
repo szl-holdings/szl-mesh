@@ -160,6 +160,8 @@ class MeshNode:
             now_utc=now_utc if now_utc is not None else datetime.now(timezone.utc),
             revoked_node_ids=revoked,
             pubkey_registry=registry,
+            expected_document_id=op.doc_id,
+            expected_node_id=op.node_id,
         )
 
     # ── receive a remote op + receipt ────────────────────────────────
