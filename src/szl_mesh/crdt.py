@@ -29,13 +29,35 @@ from __future__ import annotations
 import hashlib
 import json
 from copy import deepcopy
-from dataclasses import dataclass, field, replace
+from dataclasses import dataclass, replace
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 # Track labels (mirror proto TrackStatus).
 AUTHORIZED = "AUTHORIZED"
 OBSERVED = "OBSERVED"
 REVOKED = "REVOKED"
+
+# A conservative, remove-wins join semilattice for contradictory local track
+# classifications attached to the SAME content-addressed operation. This is
+# separate from Receipt Gate verification: imported track strings are not proof.
+_TRACK_RANK = {AUTHORIZED: 0, OBSERVED: 1, REVOKED: 2}
+
+
+def _valid_track(track: str) -> None:
+    if type(track) is not str or track not in _TRACK_RANK:
+        raise ValueError("invalid CRDT track; expected AUTHORIZED, OBSERVED, or REVOKED")
+
+
+def join_track(left: str, right: str) -> str:
+    """Safe deterministic join: AUTHORIZED < OBSERVED < REVOKED.
+
+    max is associative, commutative and idempotent. Disagreement must never
+    promote a write merely because an authorized copy arrived first.
+    """
+    _valid_track(left)
+    _valid_track(right)
+    return max((left, right), key=_TRACK_RANK.__getitem__)
+
 
 _TOMBSTONE = "\u0000__SZL_TOMBSTONE__"  # internal sentinel for deletions
 
@@ -84,6 +106,7 @@ class Op:
     track: str = OBSERVED  # set by the Node runtime after receipt validation
 
     def __post_init__(self) -> None:
+        _valid_track(self.track)
         # frozen=True prevents field assignment, not mutation of nested JSON.
         # Bind this operation to the caller's value at construction time.
         object.__setattr__(self, "value", deepcopy(self.value))
@@ -131,7 +154,7 @@ class Op:
 
     @staticmethod
     def from_dict(d: Dict[str, Any]) -> "Op":
-        return Op(
+        op = Op(
             doc_id=d["doc_id"],
             key=d["key"],
             value=d["value"],
@@ -140,16 +163,21 @@ class Op:
             deletion=d.get("deletion", False),
             track=d.get("track", OBSERVED),
         )
+        if "op_id" in d and d["op_id"] != op.op_id:
+            raise ValueError("declared op_id does not match operation content")
+        return op
 
 
 class CRDTDocument:
     """
     An op-log LWW-map CRDT with two-track materialisation.
 
-    The op-log is a set keyed by op_id (content hash). Adding the same op twice
-    is a no-op (idempotent). Merging two documents is the set union of their
-    op-logs (commutative + associative). State is materialised by folding the
-    ops under the total order — so convergence is guaranteed by construction.
+    The op-log is keyed by content-derived op_id. Repeated identical updates
+    are idempotent; identical op_ids with conflicting local classifications
+    join in the conservative AUTHORIZED < OBSERVED < REVOKED semilattice.
+    The op set merge and track join commute and associate. Track labels are
+    local claims, NOT independently verified remote signer evidence. The Node
+    runtime must run its own Receipt Gate before any promotion.
     """
 
     def __init__(self, doc_id: str) -> None:
@@ -163,26 +191,35 @@ class CRDTDocument:
             raise ValueError(
                 f"op doc_id {op.doc_id!r} != document {self.doc_id!r}"
             )
-        if op.op_id in self._ops:
+        previous = self._ops.get(op.op_id)
+        if previous is not None:
+            if previous.raw_bytes() != op.raw_bytes():
+                raise ValueError("content-addressed op_id collision or tampered payload")
+            # op_id excludes classification. A duplicate with different local
+            # authority is NOT the same state; its safer track must win.
+            joined = join_track(previous.track, op.track)
+            if joined != previous.track:
+                self._ops[op.op_id] = replace(previous, track=joined)
             return False
         # Never retain the caller's mutable operation value inside the log.
         self._ops[op.op_id] = replace(op)
         return True
 
-    def set_op_track(self, op_id: str, track: str) -> None:
-        """Reclassify an op's track (e.g. AUTHORIZED -> REVOKED). Deterministic."""
+    def set_op_track(self, op_id: str, track: str, *, validated: bool = False) -> None:
+        """Apply a LOCAL gate classification, not a remote authorization claim.
+
+        Explicitly validated receipt re-issuance can upgrade OBSERVED to
+        AUTHORIZED. A REVOKED classification is absorbing; neither a stale
+        replica nor a later positive revalidation can resurrect that op.
+        The Node runtime must supply 'validated' only after Receipt Gate PASS.
+        """
+        _valid_track(track)
         existing = self._ops.get(op_id)
-        if existing is None:
+        if existing is None or existing.track == REVOKED:
             return
-        self._ops[op_id] = Op(
-            doc_id=existing.doc_id,
-            key=existing.key,
-            value=existing.value,
-            lamport=existing.lamport,
-            node_id=existing.node_id,
-            deletion=existing.deletion,
-            track=track,
-        )
+        if track == AUTHORIZED and existing.track != AUTHORIZED and validated is not True:
+            raise ValueError("AUTHORIZED promotion requires locally validated receipt")
+        self._ops[op_id] = replace(existing, track=track)
 
     def op_track(self, op_id: str) -> Optional[str]:
         """Return a local classification without exposing mutable op values."""
@@ -191,9 +228,10 @@ class CRDTDocument:
 
     def merge(self, other: "CRDTDocument") -> int:
         """
-        Merge another document's op-log into this one (set union).
-        Returns the number of newly added ops. Commutative, associative,
-        idempotent — order of merges does not affect the final state.
+        Merge another document's op-log by op identity and conservative track
+        join. Returns the number of NEW op IDs (not track changes). Joining
+        labels is associative, commutative, and idempotent. Remote labels are
+        assertions, not receipt verification; MeshNode separately gates them.
         """
         if other.doc_id != self.doc_id:
             raise ValueError("cannot merge documents with different doc_id")
