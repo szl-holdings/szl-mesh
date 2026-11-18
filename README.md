@@ -542,6 +542,29 @@ Doctrine v11.
 
 ---
 
+## Mesh Chronicle — durable local proof database
+
+SZL-MESH now includes an opt-in **SQLite WAL persistence and causal
+evidence-query layer**. MeshNode can commit original CRDT operations and
+DSSE receipts before changing in-memory state. Offline replicas remain
+convergent by content hash; queries expose distinct OBSERVED and currently
+revalidated AUTHORIZED projections, a local event-sequence history, bounded
+causal signer-claim graphs, and value-free evidence explanations. Graph links
+are assertions, not a global causality or Byzantine consensus proof.
+Signing keys and operational privileges
+are **not** stored in the database.
+
+Run a credential-free synthetic smoke with:
+
+```bash
+python -m szl_mesh.chronicle_demo --demo
+```
+
+The smoke proves only a local simulation, not a hosted database, distributed
+production cluster, signed external checkpoint, live HF parity or release
+admission. The design, SQL limits, recovery hazards and required fleet gates
+are in [docs/MESH_CHRONICLE.md](docs/MESH_CHRONICLE.md).
+
 ## The Ouroboros loop (doctrine cross-reference)
 
 szl-mesh does **not** implement the estate's Ouroboros bounded-recursion kernel — it is a

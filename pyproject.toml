@@ -19,6 +19,7 @@ spine = ["szl-receipt-dsse>=0.3.1"]
 
 [project.scripts]
 szl-mesh-demo = "szl_mesh.demo:main"
+szl-mesh-chronicle = "szl_mesh.chronicle_demo:main"
 
 [project.urls]
 Homepage = "https://github.com/szl-holdings/szl-mesh"
