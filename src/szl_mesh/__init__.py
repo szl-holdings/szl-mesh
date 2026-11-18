@@ -94,3 +94,8 @@ __all__ += [
     "transition_output_digest",
     "verify_mesh_receipt",
 ]
+
+# Source-only, non-authorizing Python organ junction. No provider I/O.
+from .agentic_fabric import compile_advisory, verify_advisory, SOURCE_PINS  # noqa: E402
+
+__all__ += ["compile_advisory", "verify_advisory", "SOURCE_PINS"]

@@ -35,6 +35,17 @@
 [Product](https://a-11-oy.com) · [Proof](https://a11oy.net) · [GitHub organization](https://github.com/szl-holdings)
 <!-- /szl:header -->
 
+## Python proof-carrying organ junction — source-only
+
+A stdlib-only, **non-authorizing** `szl_mesh.agentic_fabric` integration binds
+immutable **Second Brain**, **Living Anatomy**, **Muyu/Ouroboros**, **21 formula
+names**, **8 falsifiable invariants**, **Hatun** tool names, **Lean locked-eight**
+references and the **Khipu** kernel into a bounded, typed advisory packet.
+It never invokes MCP tools, executes formulas, trains models, loads private
+memory, or grants execution authority. Evidence remains an unsigned proposal;
+independent runtime/signer checks and owner approvals are still required.
+See [the source-identity, math and negative-test contract](docs/PROOF_CARRYING_ORGAN_FABRIC.md).
+
 ## 💡 Why it matters
 
 It brings always-converging shared state and Byzantine-fault-tolerant agreement to edge and disconnected deployments, so a sovereign fleet keeps making consistent, signed governance decisions without
