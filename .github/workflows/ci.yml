@@ -284,7 +284,7 @@ jobs:
       - name: Install local package and offline test runner
         run: python -m pip install -e . pytest
       - name: Test durable CRDT, DSSE, revocation and rollback contracts
-        run: python -m pytest tests/test_mesh_chronicle.py tests/test_agentic_fabric.py -q
+        run: python -m pytest -q tests/test_mesh_chronicle.py tests/test_agentic_fabric.py tests/test_heritage_math.py tests/test_heritage_joint.py
       - name: Smoke local synthetic database (no provider writes)
         run: python -m szl_mesh.chronicle_demo --demo
 
