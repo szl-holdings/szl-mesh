@@ -22,20 +22,25 @@ from __future__ import annotations
 
 from copy import deepcopy
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional, Tuple
+from typing import TYPE_CHECKING, Any, Dict, Optional, Tuple
 
 from cryptography.hazmat.primitives import serialization
-from cryptography.hazmat.primitives.asymmetric import ec
 
 from . import receipts as rcpt
-from .crdt import AUTHORIZED, OBSERVED, REVOKED, CRDTDocument, Op
+from .crdt import AUTHORIZED, OBSERVED, CRDTDocument, Op
 from .enrollment import FormationGateway, build_enrollment_request
+
+if TYPE_CHECKING:
+    from .chronicle import MeshChronicle
 
 
 class MeshNode:
     """A single in-process SZL-MESH node."""
 
-    def __init__(self, name: str, doc_id: str) -> None:
+    def __init__(
+        self, name: str, doc_id: str, *, chronicle: Optional["MeshChronicle"] = None
+    ) -> None:
+        self._chronicle = chronicle
         self.name = name
         self.doc_id = doc_id
         self._priv, self.node_id = rcpt.generate_node_keypair()
@@ -104,7 +109,9 @@ class MeshNode:
             raise RuntimeError(f"node {self.name} must enroll before writing")
 
         from_heads = self.doc.heads()
-        lamport = self._tick()
+        # With durable storage, reserve the Lamport value but do not mutate
+        # memory until the exact op+receipt commit is durable.
+        lamport = (self._lamport + 1 if self._chronicle is not None else self._tick())
         op = Op(
             doc_id=self.doc_id,
             key=key,
@@ -114,8 +121,14 @@ class MeshNode:
             deletion=deletion,
         )
         change_hash = op.op_id
-        self.doc.add_op(op)  # added as OBSERVED first; gate may upgrade
-        to_heads = self.doc.heads()
+        if self._chronicle is not None:
+            candidate = CRDTDocument(self.doc_id)
+            candidate.merge(self.doc)
+            candidate.add_op(op)
+            to_heads = candidate.heads()
+        else:
+            self.doc.add_op(op)  # original in-memory-only path
+            to_heads = self.doc.heads()
 
         stmt = rcpt.build_state_transition_statement(
             crdt_doc_id=self.doc_id,
@@ -126,6 +139,10 @@ class MeshNode:
             transition_class=transition_class,
         )
         envelope = rcpt.build_dsse_receipt(stmt, self._priv)
+        if self._chronicle is not None:
+            self._chronicle.ingest(op, envelope)  # atomic commit or raise
+            self._lamport = lamport
+            self.doc.add_op(op)
         # The returned broadcast record belongs to the caller, not the ledger.
         self.receipt_ledger[change_hash] = deepcopy(envelope)
 
@@ -180,6 +197,12 @@ class MeshNode:
             # Unretainable evidence cannot authorize an otherwise visible op.
             envelope = None
         change_hash = op.op_id
+        # A peer cannot advance the local clock or modify CRDT state unless
+        # its exact observation is first durably committed, when opted in.
+        if self._chronicle is not None:
+            if op.doc_id != self.doc_id:
+                raise ValueError("remote operation document mismatch")
+            self._chronicle.ingest(op, envelope)
         previous_track = self.doc.op_track(change_hash)
         # Advance Lamport clock to preserve causal ordering across the mesh.
         self._tick(op.lamport)

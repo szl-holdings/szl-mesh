@@ -17,9 +17,17 @@ env/
 .secret/
 .keys_DO_NOT_COMMIT.pem
 
-# Logs & temp
+# Logs, local data and temp — signed authority is NEVER stored in SQLite
 *.log
 *.tmp
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm
+*.sqlite3
+*.db
+*.db-wal
+*.db-shm
+.tmp-mesh-*/
 .DS_Store
 
 # Build / dist

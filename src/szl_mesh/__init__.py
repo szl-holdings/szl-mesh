@@ -11,6 +11,7 @@ Two-track soft-safety AP model is the real shipped one
 """
 
 from .crdt import AUTHORIZED, OBSERVED, REVOKED, CRDTDocument, Op
+from .chronicle import MeshChronicle, ChronicleIntegrityError
 from .enrollment import FormationGateway, build_enrollment_request
 from .node import MeshNode
 from .receipts import (
@@ -30,6 +31,8 @@ __all__ = [
     "REVOKED",
     "CRDTDocument",
     "Op",
+    "MeshChronicle",
+    "ChronicleIntegrityError",
     "MeshNode",
     "FormationGateway",
     "build_enrollment_request",

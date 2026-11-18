@@ -261,10 +261,34 @@ jobs:
           tests/test_receipt_signer_identity.py tests/test_enrollment_trust.py
           tests/test_receipt_operation_binding.py -q
 
-  # ── PCGI Spine Test ──────────────────────────────────────────────
-  # Verifies the canonical szl-receipt fold (src/szl_mesh/spine.py, T302):
-  # a mesh state transition emits ONE szl-receipt binding subject + input
-  # digest + output/state digest + governing policy id + energy=UNAVAILABLE.
+  # ── Chronicle Database Test ──────────────────────────────────────
+  # Chronicle: refuse stale/non-verifiable local database evidence.
+  # New smoke and two Python runtimes gate main-branch provenance.
+  test-chronicle:
+    name: Durable mesh evidence database (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install local package and offline test runner
+        run: python -m pip install -e . pytest
+      - name: Test durable CRDT, DSSE, revocation and rollback contracts
+        run: python -m pytest tests/test_mesh_chronicle.py -q
+      - name: Smoke local synthetic database (no provider writes)
+        run: python -m szl_mesh.chronicle_demo --demo
+
+  # Spine: separately test the canonical szl-receipt binding.
+  # A mesh transition binds subject, input/output digests, policy and energy.
   test-spine:
     name: PCGI Spine (szl-receipt fold)
     runs-on: ubuntu-22.04
@@ -295,7 +319,7 @@ jobs:
   # ── SLSA L1 Provenance ──────────────────────────────────────────
   slsa-provenance:
     name: SLSA L1 Provenance
-    needs: [lint-proto, lint-markdown, test-hello]
+    needs: [lint-proto, lint-markdown, test-hello, test-chronicle]
     runs-on: ubuntu-22.04
     if: github.ref == 'refs/heads/main'
     steps:
