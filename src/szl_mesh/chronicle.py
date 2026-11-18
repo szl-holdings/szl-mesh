@@ -404,7 +404,9 @@ class MeshChronicle:
                 except (ValueError, TypeError, KeyError, UnicodeError, RecursionError):
                     statuses.append("RECEIPT_INVALID")
             if authorized:
-                document.set_op_track(op_id, AUTHORIZED)
+                # Only current receipt verification against caller-supplied
+                # independent trust/revocation state may promote an op.
+                document.set_op_track(op_id, AUTHORIZED, validated=True)
             assessments.append({
                 "op_id": op_id, "key": op.key, "node_id": op.node_id,
                 "lamport": op.lamport,
