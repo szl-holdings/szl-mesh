@@ -32,7 +32,7 @@ What this module adds (Mesh Dev 2 lane):
    missing 4th witness still yields canonical (3-of-4); two bad witnesses do
    NOT (2-of-4 < threshold).
 
-3. ``corroborate`` / ``CorroborationLedger`` — the spec/04 SOFT-SAFETY AP
+3. ``CorroborationLedger`` — the spec/04 SOFT-SAFETY AP
    annotation that runs ALONGSIDE the AP CRDT and NEVER blocks writes. This is
    the real, shipped Byzantine-corroboration model. It is **soft-safety AP, NOT
    blocking BFT consensus**.
@@ -47,6 +47,9 @@ DOCTRINE v11 honesty (NEVER violate):
 from __future__ import annotations
 
 import hashlib
+import re
+from copy import deepcopy
+from datetime import datetime, timedelta, timezone
 from dataclasses import dataclass, field
 from typing import Iterable, Optional
 
@@ -397,7 +400,7 @@ def verify_quorum(
 # Spec 04 — Byzantine corroboration (SOFT-SAFETY AP, NOT blocking BFT consensus)
 # ─────────────────────────────────────────────────────────────────────────────
 #
-# This is the REAL, shipped Byzantine-corroboration model. It is a SOFT VOTING
+# This is a local claimed-reporter annotation, NOT authenticated peer voting.
 # ANNOTATION that runs ALONGSIDE the AP CRDT and NEVER blocks writes. Writes are
 # always immediate (AP); corroboration is eventual / best-effort.
 #
@@ -422,25 +425,62 @@ SOFT_SAFETY_AP = True
 BLOCKS_WRITES = False
 
 
+_HEX_256 = re.compile(r"[0-9a-f]{64}\Z")
+_NODE_NAME = re.compile(r"[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}\Z")
+
+
+def _collector_now(now: datetime | None) -> datetime:
+    if now is None:
+        return datetime.now(timezone.utc)
+    if not isinstance(now, datetime) or now.tzinfo is None or now.utcoffset() is None:
+        raise ValueError("clock must be an aware datetime")
+    return now.astimezone(timezone.utc)
+
+
+def _bound_expiry(text: str) -> datetime:
+    if not isinstance(text, str) or not text:
+        raise ValueError("window_expires_at must be a nonempty ISO datetime")
+    try:
+        parsed = datetime.fromisoformat(text.replace("Z", "+00:00"))
+    except ValueError as exc:
+        raise ValueError("window_expires_at must be an ISO datetime") from exc
+    if parsed.tzinfo is None or parsed.utcoffset() is None:
+        raise ValueError("window_expires_at must include an offset")
+    return parsed.astimezone(timezone.utc)
+
+
 @dataclass
 class CorroborationLedger:
-    """A CRDT-style corroboration annotation map (spec/04 §3.3).
+    """Advisory-only multi-reporter observations; not authenticated peer consensus.
 
-    Stored as a separate document — it NEVER mutates application state and NEVER
-    blocks writes. Concurrent observations from multiple collectors converge
-    (set-union of corroborating node ids).
-
-    This is soft-safety AP, NOT blocking BFT consensus.
+    This is a bounded, in-process record, not a mergeable replicated CRDT object.
+    It does NOT validate enrollment, transport identity, independently signed node
+    assertions, or signatures. Multiple claimed node IDs never grant action
+    authority. All policy/class and collector-window changes fail closed.
     """
-    policies: dict = field(default_factory=lambda: dict(DEFAULT_CORROBORATION_POLICIES))
-    entries: dict = field(default_factory=dict)  # change_hash -> annotation
 
-    # honest, explicit labels
+    policies: dict = field(default_factory=lambda: deepcopy(DEFAULT_CORROBORATION_POLICIES))
+    entries: dict = field(default_factory=dict)
     soft_safety_ap: bool = SOFT_SAFETY_AP
     blocks_writes: bool = BLOCKS_WRITES
 
+    def __post_init__(self) -> None:
+        if not isinstance(self.policies, dict) or not isinstance(self.entries, dict):
+            raise ValueError("corroboration configuration requires dictionaries")
+        self.policies = deepcopy(self.policies)
+        self.entries = deepcopy(self.entries)
+
     def policy_for(self, transition_class: str) -> dict:
-        return self.policies.get(transition_class, {"k": 2, "window_seconds": 30})
+        if not isinstance(transition_class, str) or transition_class not in self.policies:
+            raise ValueError("transition_class has no admitted corroboration policy")
+        policy = self.policies[transition_class]
+        if not isinstance(policy, dict):
+            raise ValueError("corroboration policy must be an object")
+        k, seconds = policy.get("k"), policy.get("window_seconds")
+        if (type(k) is not int or not 1 <= k <= 128
+                or type(seconds) is not int or not 1 <= seconds <= 86400):
+            raise ValueError("corroboration policy requires positive bounded integers")
+        return {"k": k, "window_seconds": seconds}
 
     def observe(
         self,
@@ -448,39 +488,79 @@ class CorroborationLedger:
         node_id: str,
         transition_class: str = "PLATFORM_STATUS",
         window_expires_at: str = "",
+        *,
+        now: datetime | None = None,
     ) -> dict:
-        """Record that ``node_id`` independently observed ``change_hash``.
+        """Record one CLAIMED reporter, never authorize an effect.
 
-        Returns the current annotation. The CRDT write itself already happened
-        elsewhere and is NOT gated by this call — this is annotation only.
-        Status flips PENDING -> CORROBORATED once >= k DISTINCT nodes observe it.
+        Window T begins with the first collector observation. Caller expiry may
+        shorten but never extend it. Time is local collector time, not signed
+        global time. Replays, class/policy switches and expired observations never
+        increase confidence. No network or CRDT state mutation occurs here.
         """
-        pol = self.policy_for(transition_class)
-        k = int(pol["k"])
+        if not isinstance(change_hash, str) or not _HEX_256.fullmatch(change_hash):
+            raise ValueError("change_hash must be lowercase SHA-256 hex")
+        if not isinstance(node_id, str) or not _NODE_NAME.fullmatch(node_id):
+            raise ValueError("node_id must be a bounded nonempty token")
+        policy = self.policy_for(transition_class)
+        clock = _collector_now(now)
+        requested = _bound_expiry(window_expires_at) if window_expires_at else None
         e = self.entries.get(change_hash)
         if e is None:
+            expiry = clock + timedelta(seconds=policy["window_seconds"])
+            if requested is not None:
+                if not clock < requested <= expiry:
+                    raise ValueError("window_expires_at cannot extend or expire the policy window")
+                expiry = requested
             e = {
                 "status": "PENDING",
                 "corroborating_nodes": [],
-                "policy_k": k,
+                "policy_k": policy["k"],
+                "policy_window_seconds": policy["window_seconds"],
                 "transition_class": transition_class,
-                "window_expires_at": window_expires_at,
+                "first_observed_at": clock.isoformat(),
+                "window_expires_at": expiry.isoformat(),
                 "corroborated_at": None,
+                "identity_verification": "UNVERIFIED_NODE_ASSERTIONS",
+                "operational_authority": False,
             }
             self.entries[change_hash] = e
-        # set-union semantics (CRDT-convergent): distinct nodes only
+        else:
+            if e["transition_class"] != transition_class:
+                raise ValueError("transition_class differs from original observation")
+            if (e["policy_k"] != policy["k"]
+                    or e["policy_window_seconds"] != policy["window_seconds"]):
+                raise ValueError("policy changed during active corroboration window")
+            if requested is not None and requested != _bound_expiry(e["window_expires_at"]):
+                raise ValueError("window_expires_at differs from original observation")
+            if clock < _bound_expiry(e["first_observed_at"]):
+                raise ValueError("clock moved backwards relative to first observation")
+        if clock >= _bound_expiry(e["window_expires_at"]):
+            e["status"] = "FAILED"
+            e["corroborated_at"] = None
+        if e["status"] == "FAILED":
+            return deepcopy(e)
+        # CRDT-like set-union is an analogy: this local list is not a replicated,
+        # authenticated grow-only set and cannot establish independence of peers.
         if node_id not in e["corroborating_nodes"]:
             e["corroborating_nodes"].append(node_id)
-        if e["status"] != "FAILED" and len(set(e["corroborating_nodes"])) >= k:
+        if len(e["corroborating_nodes"]) >= e["policy_k"]:
             e["status"] = "CORROBORATED"
-        return dict(e)
+            if e["corroborated_at"] is None:
+                e["corroborated_at"] = clock.isoformat()
+        return deepcopy(e)
 
-    def status(self, change_hash: str) -> str:
+    def status(self, change_hash: str, *, now: datetime | None = None) -> str:
+        """Read-time expiry check WITHOUT mutating state or signing a receipt."""
         e = self.entries.get(change_hash)
-        return e["status"] if e else "PENDING"
+        if e is None:
+            return "PENDING"
+        if e["status"] == "FAILED" or _collector_now(now) >= _bound_expiry(e["window_expires_at"]):
+            return "FAILED"
+        return e["status"]
 
     def mark_failed(self, change_hash: str) -> None:
-        """Mark an entry FAILED (e.g. window expired below k). Annotation only."""
+        """Terminal failure is sticky. The application CRDT is never changed."""
         e = self.entries.get(change_hash)
         if e is not None:
             e["status"] = "FAILED"
@@ -493,9 +573,9 @@ def combined_classification(receipt_status: str, corroboration_status: str) -> s
     Corroboration never blocks; it only annotates confidence.
     """
     table = {
-        ("AUTHORIZED", "CORROBORATED"): "Highest confidence — command-ready",
-        ("AUTHORIZED", "PENDING"): "High confidence (single-receipt) — usable for command",
-        ("OBSERVED", "CORROBORATED"): "Medium confidence — multiple nodes agree, no doctrine proof",
+        ("AUTHORIZED", "CORROBORATED"): "Reported AUTHORIZED + peer assertions — verify receipt, independent identities, and separate action gate",
+        ("AUTHORIZED", "PENDING"): "Reported AUTHORIZED + pending peer assertions — separate action gate required",
+        ("OBSERVED", "CORROBORATED"): "Multiple claimed node IDs — unverified identities and no doctrine proof",
         ("OBSERVED", "PENDING"): "Low confidence — situational awareness only",
         ("AUTHORIZED", "FAILED"): "Alert — node signed receipt but peers don't corroborate the value",
     }

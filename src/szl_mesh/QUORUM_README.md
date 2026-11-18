@@ -15,6 +15,40 @@ real **ECDSA-P256-SHA256 DSSE** signatures.
 | `action_hash(action) -> str` | Deterministic action hash (engine `canonical_json` + SHA-256), or pass Dev 1's `change_hash` directly. |
 | `CorroborationLedger` / `combined_classification` | spec/04 **soft-safety AP** corroboration annotation. Runs ALONGSIDE the AP CRDT; **NEVER blocks writes**. |
 
+## Corroboration implementation boundary
+
+CorroborationLedger counts distinct **claimed node IDs**, not independently
+authenticated peer identities. The AUTHORIZED string given to
+combined_classification is not verified by that helper. CORROBORATED does
+not mean command permit, receipt verification or a BFT certificate. Effects
+remain under the separate signed receipt and governance controller gates.
+
+The local collector binds the first transition class and policy to one
+content SHA-256. Its deadline begins at collection time; an external expiry
+may shorten but not extend it. Stale, reclassified, and replayed observations
+cannot gain confidence. Read-time expiry evaluation does not mutate state.
+No network transport or replicated CRDT merge is performed here.
+
+The conditional mathematical claim k > f presumes authenticated independent
+identities. This string-ID API cannot establish that premise. Cryptographic
+Khipu quorum verification is a separate interface, with unconditional
+safety still marked Conjecture 2.
+
+Primary references (not dependencies, integrations, or benchmark results):
+
+- Castro and Liskov, Practical Byzantine Fault Tolerance, OSDI 1999:
+  https://www.usenix.org/conference/osdi-99/practical-byzantine-fault-tolerance
+- Shapiro et al., convergent and commutative replicated data types, 2011:
+  https://www.lip6.fr/Marc.Shapiro/papers/2011/Comprehensive-CRDTs-RR7506-2011-01.pdf
+- Defense Unicorns Peat, CRDT and enrollment source:
+  https://github.com/defenseunicorns/peat
+- Anduril Lattice, entity provenance/expiry:
+  https://developer.anduril.com/guides/entities/overview
+- Palantir Ontology, typed actions and governed object access:
+  https://www.palantir.com/docs/foundry/object-backend/overview
+- Anthropic, outcome-oriented agent evaluations, 2026:
+  https://www.anthropic.com/research/demystifying-evals-for-ai-agents
+
 ## Interop with Dev 1 runtime
 `propose_action` accepts Dev 1's `StateTransitionStatement` dict directly (hashed via
 the engine's `canonical_json`), or Dev 1's 64-hex `change_hash` string as-is. The
