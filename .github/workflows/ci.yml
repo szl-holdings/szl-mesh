@@ -259,7 +259,8 @@ jobs:
         run: >-
           python -m pytest tests/test_runtime.py tests/test_receipt_shapes.py
           tests/test_receipt_signer_identity.py tests/test_enrollment_trust.py
-          tests/test_receipt_operation_binding.py -q
+          tests/test_receipt_operation_binding.py
+          tests/test_track_semilattice.py -q
 
   # ── Chronicle Database Test ──────────────────────────────────────
   # Chronicle: refuse stale/non-verifiable local database evidence.

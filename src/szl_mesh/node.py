@@ -147,7 +147,7 @@ class MeshNode:
         self.receipt_ledger[change_hash] = deepcopy(envelope)
 
         gate = self._classify(op, envelope)
-        self.doc.set_op_track(change_hash, gate.track)
+        self.doc.set_op_track(change_hash, gate.track, validated=gate.track == AUTHORIZED)
         return {
             "op": op.to_dict(),
             "op_obj": op,
@@ -234,10 +234,10 @@ class MeshNode:
                 # Keep first observed evidence for inspection, until valid
                 # re-issuance replaces it; do not retain every rejected replay.
                 self.receipt_ledger[change_hash] = envelope
-        self.doc.set_op_track(change_hash, gate.track)
+        self.doc.set_op_track(change_hash, gate.track, validated=gate.track == AUTHORIZED)
         return {
             "newly_added": newly,
-            "track": gate.track,
+            "track": self.doc.op_track(change_hash),
             "receipt_status": gate.receipt_status,
             "incoming_receipt_status": incoming_gate.receipt_status,
             "used_retained_receipt": used_retained_receipt,

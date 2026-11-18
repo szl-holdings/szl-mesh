@@ -145,3 +145,29 @@ def test_all_ops_in_a_read_use_one_validation_instant(formation, monkeypatch):
     assert receiver.authorized_state() == {"status": {"value": "ready"}, "other": "value"}
     assert len(seen) == 2
     assert seen[0] == seen[1]
+
+
+def test_revocation_absorbs_a_later_valid_reissue_in_node_runtime(formation):
+    """The runtime result must reflect the effective REVOKED state, not gate PASS."""
+    _, receiver, _, record, _ = formation
+    change_hash = record["change_hash"]
+    receiver.doc.set_op_track(change_hash, REVOKED)
+    result = receiver.apply_remote(record)  # the signature itself is still valid
+    assert result["track"] == REVOKED
+    assert receiver.doc.op_track(change_hash) == REVOKED
+    assert receiver.authorized_state() == {}
+    assert receiver.observed_state() == {}
+
+
+def test_untrusted_incoming_label_is_not_taken_as_receipt_authority(formation):
+    sender, receiver, _, _, _ = formation
+    candidate = sender.write("untrusted-claimed-auth", "do-not-authorize")
+    without_receipt = {**candidate, "receipt": None}
+    from szl_mesh.crdt import Op
+
+    forged = Op.from_dict({**candidate["op"], "track": AUTHORIZED})
+    without_receipt["op_obj"] = forged
+    observed = receiver.apply_remote(without_receipt)
+    assert observed["track"] == OBSERVED
+    assert "untrusted-claimed-auth" not in receiver.authorized_state()
+    assert receiver.observed_state()["untrusted-claimed-auth"] == "do-not-authorize"
