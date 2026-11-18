@@ -240,7 +240,7 @@ jobs:
       - name: Install package and test runner
         run: python -m pip install -e . pytest
       - name: Verify quorum policy and signature regressions
-        run: python -m pytest tests/test_quorum.py tests/test_quorum_policy.py -q
+        run: python -m pytest tests/test_quorum.py tests/test_quorum_policy.py tests/test_corroboration_boundary.py -q
 
   # Origin: OpenAI Codex, enrollment/receiver-trust audit regression coverage.
   test-runtime-trust:

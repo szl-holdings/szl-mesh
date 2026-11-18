@@ -79,7 +79,7 @@ corroboration_policies:
     window_seconds: 10
 ```
 
-Policies are replicated as CRDT metadata and versioned with the doctrine version.
+Protocol target: policies should be replicated as versioned CRDT metadata. The current CorroborationLedger holds an isolated local policy snapshot; it does not implement replicated-policy distribution.
 
 ### 3.3 CRDT Annotation for Corroboration
 
@@ -99,7 +99,7 @@ Corroboration state is stored in a separate CRDT document (never mutating applic
 }
 ```
 
-The corroboration document is a CRDT map; concurrent writes from multiple corroboration collectors converge deterministically.
+Protocol target: a corroboration document could implement authenticated CRDT set-union. The shipped CorroborationLedger is an in-memory annotation map without peer transport, durable replicated merge, or enrollment attestation. No actual multi-collector convergence is claimed.
 
 ---
 
@@ -107,13 +107,13 @@ The corroboration document is a CRDT map; concurrent writes from multiple corrob
 
 ### 4.1 Corroboration Safety
 
-**Theorem (informal):** Let `f` be the number of Byzantine nodes in a cell of `n` nodes. For a corroboration policy with threshold `k`, if `k > f`, then Byzantine nodes cannot achieve `CORROBORATED`
+**Conditional claim (not machine-checked):** Assume distinct, independently authenticated, non-Sybil node identities and honest reporting. Let `f` be the number of Byzantine nodes in a cell of `n` nodes. For a corroboration policy with threshold `k`, if `k > f`, then Byzantine nodes cannot achieve `CORROBORATED`
 for any false state value `S_false` for which no honest node has independently observed `S_false`.
 
 **Proof sketch:** For `S_false` to become `CORROBORATED`, `k` distinct nodes must report `S_false`. If `k > f`, at least one of the `k` reporters must be honest. An honest node reports only what it
 has observed. If no honest node has observed `S_false`, no honest node reports it, so the quorum of `k` cannot be achieved by Byzantine nodes alone.
 
-This is weaker than PBFT safety (which holds against up to `f < n/3` Byzantine nodes for all values, under all conditions) but does not sacrifice availability.
+This conditional argument depends on independent authenticated identities. This Python annotation accepts caller-supplied strings, so it cannot itself establish Byzantine fault tolerance for any k. PBFT is a separate authenticated state-machine protocol.
 
 ### 4.2 Corroboration Liveness
 
@@ -148,11 +148,13 @@ Corroboration and receipt validation are **independent** checks:
 
 | Receipt Status | Corroboration Status | Combined Classification |
 |----------------|---------------------|------------------------|
-| AUTHORIZED | CORROBORATED | Highest confidence — command-ready |
-| AUTHORIZED | PENDING | High confidence (single-receipt) — usable for command |
-| OBSERVED | CORROBORATED | Medium confidence — multiple nodes agree, no doctrine proof |
+| AUTHORIZED | CORROBORATED | Reported authority and peer assertions; verify DSSE, node identity and action policy separately |
+| AUTHORIZED | PENDING | Reported authority with pending peer assertions; independent action gate required |
+| OBSERVED | CORROBORATED | Multiple claimed IDs; identities unverified, no doctrine proof |
 | OBSERVED | PENDING | Low confidence — situational awareness only |
 | AUTHORIZED | FAILED | Alert — node signed receipt but peers don't corroborate the value |
+
+An annotation does not independently verify a caller-supplied receipt status. The current local collector freezes the first class and policy, expires its observation window, and never signs, deploys or grants effects.
 
 The AUTHORIZED + FAILED combination is particularly significant: it may indicate a Byzantine node that obtained a Formation CA certificate and is issuing receipts for false state.
 

@@ -216,7 +216,7 @@ def test_corroboration_single_byzantine_cannot_corroborate():
 
 
 def test_combined_classification_table():
-    assert "command-ready" in Q.combined_classification("AUTHORIZED", "CORROBORATED")
+    assert "separate action gate" in Q.combined_classification("AUTHORIZED", "CORROBORATED")
     assert Q.combined_classification("AUTHORIZED", "FAILED").startswith("Alert")
     print("[PASS] receipt × corroboration classification table matches spec/04 §6")
 
