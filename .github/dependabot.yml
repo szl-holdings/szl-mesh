@@ -59,3 +59,62 @@ updates:
       semver-major-days: 21
       semver-minor-days: 7
       semver-patch-days: 3
+
+  # --- Added by supply-chain hygiene patch (Kallpa e48656eb, 2026-11-19) ---
+  # Dockerfile base images (python:*-slim digest pins are bumped by Dependabot)
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "08:00"
+      timezone: "America/New_York"
+    labels:
+      - "dependencies"
+      - "security"
+    open-pull-requests-limit: 3
+    cooldown:
+      default-days: 3
+
+  - package-ecosystem: "docker"
+    directory: "/lab"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "08:00"
+      timezone: "America/New_York"
+    labels:
+      - "dependencies"
+      - "security"
+    open-pull-requests-limit: 3
+    cooldown:
+      default-days: 3
+
+  # Runtime requirement files that ship in the images (root *.txt incl. hashed lock, and /lab)
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "08:00"
+      timezone: "America/New_York"
+    labels:
+      - "dependencies"
+      - "security"
+    open-pull-requests-limit: 3
+    cooldown:
+      default-days: 3
+
+  - package-ecosystem: "pip"
+    directory: "/lab"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "08:00"
+      timezone: "America/New_York"
+    labels:
+      - "dependencies"
+      - "security"
+    open-pull-requests-limit: 3
+    cooldown:
+      default-days: 3
