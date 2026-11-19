@@ -48,7 +48,7 @@ Hardware attestation checks are best-effort during enrollment; physical deployme
 SZL-MESH is maintained in a public repository. If you discover a security vulnerability:
 
 1. **Do not open a public GitHub issue.**
-2. Email `security@szlholdings.ai` with:
+2. Email `security@szlholdings.com` with:
    - Subject: `[SZL-MESH] Security Disclosure`
    - Description of the vulnerability
    - Steps to reproduce (if applicable)
