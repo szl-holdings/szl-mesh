@@ -57,20 +57,38 @@ restart services, mint model weight attestations or make the estate operational.
 
 ## Joint model review and independent verification
 
-The initial real Kimi and local Ministral review both returned **REJECT**.
-Kimi identified a structural replay gap: a self-rehashed record could
-retain an inconsistent `READY_FOR_OWNER_REVIEW` state after tests were
-changed to FAIL. The decoder now checks the exact output shape and the
-internal relation between reviewer decisions, declared test counts, reasons
-and advisory status; duplicate exact model IDs are also held.
+Cloud-backed Kimi and Mistral Large 4, called through localhost Ollama,
+independently returned REJECT on the initial public source. Both identified
+the stale READY replay and forged HOLD reason-list vulnerability. These
+are untrusted model observations, not signatures or GitHub approvals.
+The local Ministral 3B model is installed but its on-device canaries timed
+out; it must NOT be credited with a completed local review.
 
-Mistral raised model URL injection and SHA whitespace concerns. Direct
-source inspection showed that URL/traversal strings were already explicitly
-rejected, and Python `fullmatch` plus lower-hex patterns reject whitespace.
-Adversarial tests now exercise both cases instead of treating an LLM claim
-as a demonstrated vulnerability. A correctly shaped *forged* set of model
-reviews can still be constructed because review-origin authentication is
-intentionally absent; the certificate therefore never authorizes a merge.
+The repaired decoder requires a caller-supplied timezone-aware clock,
+preserves reviewer and test source, patch and time evidence, and recompiles
+the complete reported negative conditions on replay. Kimi's second review
+proposed additional stale/forged counterexamples; independent regression
+tests falsified those two claims, demonstrating why model opinions alone
+must never control release decisions.
+
+A fully fabricated but structurally consistent pair of reviews remains
+possible without external identity authentication. The certificate cannot
+attest that either model ran or the tests actually executed, so it never
+grants merge, execution, training, spending or deployment authority.
+
+### Peer-identified replay repair
+
+Kimi and Mistral Large 4 independently rejected the original source decoder:
+a stale review could remain structurally valid on replay, and a forged
+self-rehashed HOLD could misreport the true dissent/test failure.
+The repaired verifier requires a **caller-supplied independent aware clock**,
+preserves each declared reviewer source/patch/timestamp and reported test
+source/patch/timestamp, then recompiles all failure reasons from those fields.
+The resulting structural record is accepted only when exactly equivalent and
+fresh. This addresses *internal inconsistency*, not forged testimony.
+Anyone can still invent two matching review declarations and recompute an
+unsigned SHA, so `READY_FOR_OWNER_REVIEW` is **never** source, model, signer,
+human approval, or production authority.
 
 ## Checks and replay
 
