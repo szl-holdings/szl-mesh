@@ -75,6 +75,15 @@ updates:
     open-pull-requests-limit: 3
     cooldown:
       default-days: 3
+    # Ignore-hold 2026-11-19: python:*-slim ships no Rust/cargo toolchain and
+    # mesh-command's hash-locked install has no cp315 pydantic-core wheel, so
+    # #105 fails the runtime-contract build; #104 establishes only that /lab's
+    # base bump is green.
+    # Lift once every hash-locked Dockerfile install succeeds on 3.15-slim.
+    ignore:
+      - dependency-name: "python"
+        versions:
+          - ">= 3.15"
 
   - package-ecosystem: "docker"
     directory: "/lab"
@@ -89,6 +98,15 @@ updates:
     open-pull-requests-limit: 3
     cooldown:
       default-days: 3
+    # Ignore-hold 2026-11-19: python:*-slim ships no Rust/cargo toolchain and
+    # mesh-command's hash-locked install has no cp315 pydantic-core wheel, so
+    # #105 fails the runtime-contract build; #104 establishes only that /lab's
+    # base bump is green.
+    # Lift once every hash-locked Dockerfile install succeeds on 3.15-slim.
+    ignore:
+      - dependency-name: "python"
+        versions:
+          - ">= 3.15"
 
   # Runtime requirement files that ship in the images (root *.txt incl. hashed lock, and /lab)
   - package-ecosystem: "pip"
