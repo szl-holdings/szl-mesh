@@ -1,0 +1,39 @@
+name: Yuyay Triad offline research contracts
+
+on:
+  pull_request:
+    paths:
+      - "src/szl_mesh/triad_research.py"
+      - "tests/test_triad_research.py"
+      - "docs/YUYAY_TRIAD_RESEARCH.md"
+      - ".github/workflows/triad-research.yml"
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: yuyay-triad-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  offline-triad:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 6
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.12"]
+    steps:
+      - name: Checkout exact source, do not retain write credential
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Select Python
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Compile pure source
+        run: python -B -m py_compile src/szl_mesh/triad_research.py
+      - name: Run offline review and adversarial tests
+        run: PYTHONPATH=src python -B -m unittest discover -s tests -p test_triad_research.py -v
