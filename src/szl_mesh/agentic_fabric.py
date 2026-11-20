@@ -7,11 +7,11 @@ The result is an UNSIGNED proposal record; it cannot authorize effects.
 """
 from __future__ import annotations
 
-from datetime import datetime, timezone
-from hashlib import sha256
 import json
 import re
-from typing import Any, Mapping
+from datetime import datetime, timezone
+from hashlib import sha256
+from typing import Any
 
 SCHEMA = "szl.mesh.agentic-organ-proposal/v1"
 MAX_BYTES = 32_768
@@ -291,3 +291,72 @@ def verify_advisory(record: dict[str, Any]) -> bool:
                 body.get("production_ready") is False)
     except (ValueError, TypeError, OverflowError):
         return False
+
+# Narrow bridge into szl-router. This never admits routing or receipt authority:
+# it binds the caller's finite JSON to the digest reported by an inference
+# receipt body. Neither source pins nor the claimed receipt are authenticated.
+_ROUTER_RECEIPT_FIELDS = frozenset({
+    "served_by", "sovereign", "tier", "energy_source", "energy", "model",
+    "attempts", "usage", "request_digest", "routing", "cost", "observer",
+    "grid_context",
+})
+
+
+def observe_router_request(
+    *,
+    model: str,
+    messages: list[dict[str, Any]],
+    receipt_body: dict[str, Any],
+    expected_router_source_sha: str,
+    reported_router_source_sha: str,
+) -> dict[str, Any]:
+    """Compare an untrusted Router receipt to finite JSON; never authorize effects.
+
+    A matching hash proves only that these caller-supplied values agree. It
+    does NOT authenticate a provider, verify a signature, validate a source
+    deployment, or grant a tool/SQL/payment operation.
+    """
+    if type(model) is not str or not (0 < len(model) <= 256):
+        raise ValueError("router model required")
+    if type(messages) is not list or not messages or any(type(m) is not dict for m in messages):
+        raise ValueError("router messages must be a nonempty list of JSON objects")
+    if (type(receipt_body) is not dict
+            or not {"model", "request_digest"} <= set(receipt_body)
+            or set(receipt_body) - _ROUTER_RECEIPT_FIELDS):
+        raise ValueError("unrecognized router receipt body")
+    if (type(expected_router_source_sha) is not str
+            or SHA40.fullmatch(expected_router_source_sha) is None
+            or type(reported_router_source_sha) is not str
+            or SHA40.fullmatch(reported_router_source_sha) is None):
+        raise ValueError("explicit 40-hex source identities required")
+    try:
+        actual = sha256(_canonical({"model": model, "messages": messages})).hexdigest()
+    except (ValueError, TypeError, OverflowError, RecursionError):
+        raise ValueError("router request must be bounded finite JSON") from None
+    claimed = receipt_body["request_digest"]
+    reasons: list[str] = []
+    if type(claimed) is not str or SHA64.fullmatch(claimed) is None:
+        reasons.append("RECEIPT_DIGEST_INVALID")
+    elif claimed != actual:
+        reasons.append("REQUEST_DIGEST_MISMATCH")
+    if receipt_body["model"] != model or type(receipt_body["model"]) is not str:
+        reasons.append("MODEL_MISMATCH")
+    if reported_router_source_sha != expected_router_source_sha:
+        reasons.append("ROUTER_SOURCE_CLAIM_MISMATCH")
+    return {
+        "schema": "szl.mesh.router-request-observation/v1",
+        "state": "HOLD" if reasons else "OBSERVED_ONLY",
+        "reasons": sorted(reasons),
+        "request_digest_recomputed": actual,
+        "request_digest_reported": claimed if type(claimed) is str and SHA64.fullmatch(claimed) else None,
+        "router_source_claim": reported_router_source_sha,
+        "router_source_expected": expected_router_source_sha,
+        "provider_identity_verified": False,
+        "source_freshness_independently_verified": False,
+        "signature_verified": False,
+        "receipt_authoritative": False,
+        "tool_calls_executed": 0,
+        "sql_writes_executed": 0,
+        "payment_authorized": False,
+        "production_ready": False,
+    }
