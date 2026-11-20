@@ -153,7 +153,12 @@ def compile_peer_review(packet: dict, *, now: datetime) -> dict:
                      "model_id_declared": record["model_id"],
                      "decision_reported": record["verdict"],
                      "reason_code": record["reason_code"],
-                     "response_digest_declared": digest})
+                     "response_digest_declared": digest,
+                     # Preserve the *reported* evidence needed for strict
+                     # replay, rather than only an uncheckable summary.
+                     "review_source_sha_reported": reviewer_source,
+                     "review_patch_sha256_reported": reviewer_patch,
+                     "review_observed_at_utc": record["observed_at_utc"]})
 
     if seen_roles != ROLES:
         reasons.add("REVIEW_ROLE_COVERAGE_MISSING")
@@ -198,7 +203,10 @@ def compile_peer_review(packet: dict, *, now: datetime) -> dict:
         "patch_sha256_reported_not_recomputed": patch,
         "reviewers": rows,
         "reported_tests": {"status": tests["status"], "passed": tests["passed"],
-                           "failed": tests["failed"], "evidence_sha256": test_digest},
+                           "failed": tests["failed"], "evidence_sha256": test_digest,
+                           "source_sha_reported": test_source,
+                           "patch_sha256_reported": test_patch,
+                           "observed_at_utc": tests["observed_at_utc"]},
         "observed_at_utc": now.isoformat(),
         "provider_family_diversity_declared": seen_families == FAMILIES,
         "reviewer_independence_verified": False,
@@ -231,9 +239,13 @@ OUTPUT_KEYS = frozenset({
 })
 OUTPUT_REVIEW_KEYS = frozenset({
     "role", "provider_family", "model_id_declared", "decision_reported",
-    "reason_code", "response_digest_declared",
+    "reason_code", "response_digest_declared", "review_source_sha_reported",
+    "review_patch_sha256_reported", "review_observed_at_utc",
 })
-OUTPUT_TEST_KEYS = frozenset({"status", "passed", "failed", "evidence_sha256"})
+OUTPUT_TEST_KEYS = frozenset({
+    "status", "passed", "failed", "evidence_sha256",
+    "source_sha_reported", "patch_sha256_reported", "observed_at_utc",
+})
 HOLD_REASON_CODES = frozenset({
     "ROLE_DUPLICATED", "PROVIDER_FAMILY_DUPLICATED",
     "REVIEW_ROLE_FAMILY_MISMATCH", "DUPLICATED_DECLARED_MODEL_ID", "REVIEW_SOURCE_MISMATCH",
@@ -245,13 +257,16 @@ HOLD_REASON_CODES = frozenset({
 })
 
 
-def verify_peer_review(record: Any) -> bool:
+def verify_peer_review(record: Any, *, now: datetime) -> bool:
     """Strict structural replay: never authenticate model, tests or signer.
 
     Rehashing any self-declared, internally consistent record remains possible.
     Only an independently trusted source/test/signer can make evidence binding.
     """
     if type(record) is not dict:
+        return False
+    if (type(now) is not datetime or now.tzinfo is None
+            or now.utcoffset() is None):
         return False
     try:
         _shape(record, OUTPUT_KEYS | {"unsigned_sha256_not_signature"},
@@ -269,7 +284,8 @@ def verify_peer_review(record: Any) -> bool:
                 "OUTPUT_SOURCE_INVALID")
         _digest(body["patch_sha256_reported_not_recomputed"], SHA64,
                 "OUTPUT_PATCH_INVALID")
-        _date(body["observed_at_utc"], "OUTPUT_TIMESTAMP_INVALID")
+        if not _fresh(body["observed_at_utc"], now.astimezone(timezone.utc)):
+            return False
         if body["state"] not in ("HOLD", "READY_FOR_OWNER_REVIEW"):
             return False
         reasons = body["reasons"]
@@ -349,7 +365,39 @@ def verify_peer_review(record: Any) -> bool:
                     len(set(names)) != 2 or len(set(response_hashes)) != 2 or
                     decisions != ["APPROVE", "APPROVE"] or status != "PASS"):
                 return False
-        return True
+        # A SHA-256 commitment by itself is forgeable. To prevent an
+        # inconsistent READY/HOLD label from surviving an attacker rehash,
+        # reconstruct exactly the original proposal schema from the bounded
+        # reported evidence and recompute ALL negative reason codes.
+        # This is structural coherence only, NOT model/test authentication.
+        original = {
+            "schema": body["schema"],
+            "repository": body["repository"],
+            "source_sha": body["source_sha_reported_not_attested"],
+            "patch_sha256": body["patch_sha256_reported_not_recomputed"],
+            "reviewers": [{
+                "role": row["role"],
+                "provider_family": row["provider_family"],
+                "model_id": row["model_id_declared"],
+                "source_sha": row["review_source_sha_reported"],
+                "patch_sha256": row["review_patch_sha256_reported"],
+                "response_sha256": row["response_digest_declared"],
+                "observed_at_utc": row["review_observed_at_utc"],
+                "verdict": row["decision_reported"],
+                "reason_code": row["reason_code"],
+            } for row in reviews],
+            "tests": {
+                "status": tests["status"],
+                "source_sha": tests["source_sha_reported"],
+                "patch_sha256": tests["patch_sha256_reported"],
+                "observed_at_utc": tests["observed_at_utc"],
+                "passed": tests["passed"], "failed": tests["failed"],
+                "evidence_sha256": tests["evidence_sha256"],
+            },
+        }
+        issuance_clock = _date(body["observed_at_utc"], "OUTPUT_TIMESTAMP_INVALID")
+        expected = compile_peer_review(original, now=issuance_clock)
+        return expected == record
     except (PeerReviewHold, ValueError, TypeError, OverflowError,
             RecursionError, KeyError):
         return False
