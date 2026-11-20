@@ -5,15 +5,18 @@ from __future__ import annotations
 import ast
 from copy import deepcopy
 from datetime import datetime, timedelta, timezone
+import importlib.util
 import json
 from pathlib import Path
-import sys
 import tempfile
 import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT / "src"))
-from szl_mesh import triad_research as triad  # noqa: E402
+SOURCE = ROOT / "src/szl_mesh/triad_research.py"
+SPEC = importlib.util.spec_from_file_location("_szl_yuyay_triad", SOURCE)
+assert SPEC is not None and SPEC.loader is not None
+triad = importlib.util.module_from_spec(SPEC)
+SPEC.loader.exec_module(triad)
 
 NOW = datetime(2026, 11, 20, 8, 30, tzinfo=timezone.utc)
 
