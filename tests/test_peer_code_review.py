@@ -51,7 +51,7 @@ class DualPeerReviewContract(unittest.TestCase):
         out = self.compile()
         self.assertEqual(out["state"], "READY_FOR_OWNER_REVIEW")
         self.assertEqual(out["reasons"], [])
-        self.assertTrue(peer.verify_peer_review(out))
+        self.assertTrue(peer.verify_peer_review(out, now=NOW))
         self.assertTrue(out["provider_family_diversity_declared"])
         for key in ("models_authenticated", "reviewer_independence_verified",
                     "test_evidence_independently_verified", "signature_verified",
@@ -144,7 +144,7 @@ class DualPeerReviewContract(unittest.TestCase):
         self.assertEqual(result["state"], "HOLD")
         self.assertIn("REVIEW_ROLE_FAMILY_MISMATCH", result["reasons"])
         self.assertFalse(result["merge_authorized"])
-        self.assertTrue(peer.verify_peer_review(result))
+        self.assertTrue(peer.verify_peer_review(result, now=NOW))
 
     def test_identical_response_digest_holds(self):
         p = packet()
@@ -233,22 +233,22 @@ class DualPeerReviewContract(unittest.TestCase):
 
     def test_digest_replay_detects_tamper(self):
         a = self.compile()
-        assert peer.verify_peer_review(a)
+        assert peer.verify_peer_review(a, now=NOW)
         for key, value in (("state", "DEPLOYED"), ("merge_authorized", True),
                            ("signature_verified", True), ("test_evidence_independently_verified", True)):
             modified = copy.deepcopy(a)
             modified[key] = value
             with self.subTest(key=key):
-                self.assertFalse(peer.verify_peer_review(modified))
-        self.assertFalse(peer.verify_peer_review({**a, "unsigned_sha256_not_signature": "f"*64}))
-        self.assertFalse(peer.verify_peer_review([]))
+                self.assertFalse(peer.verify_peer_review(modified, now=NOW))
+        self.assertFalse(peer.verify_peer_review({**a, "unsigned_sha256_not_signature": "f"*64}, now=NOW))
+        self.assertFalse(peer.verify_peer_review([], now=NOW))
 
     def test_independent_rehash_cannot_grant_authorization(self):
         a = self.compile()
         a["deployment_authorized"] = True
         core = {k: v for k, v in a.items() if k != "unsigned_sha256_not_signature"}
         a["unsigned_sha256_not_signature"] = sha256(peer.DOMAIN + peer._canonical(core)).hexdigest()
-        self.assertFalse(peer.verify_peer_review(a))
+        self.assertFalse(peer.verify_peer_review(a, now=NOW))
 
     def test_naive_or_future_clock_rejected(self):
         with self.assertRaises(peer.PeerReviewHold):
@@ -270,7 +270,7 @@ class DualPeerReviewContract(unittest.TestCase):
         result = self.compile(p)
         self.assertEqual(result["state"], "HOLD")
         self.assertIn("DUPLICATED_DECLARED_MODEL_ID", result["reasons"])
-        self.assertTrue(peer.verify_peer_review(result))
+        self.assertTrue(peer.verify_peer_review(result, now=NOW))
         self.assertFalse(result["reviewer_independence_verified"])
 
     def test_rehashed_invalid_ready_record_is_still_refused(self):
@@ -281,7 +281,7 @@ class DualPeerReviewContract(unittest.TestCase):
         a["unsigned_sha256_not_signature"] = sha256(
             peer.DOMAIN + peer._canonical(core)
         ).hexdigest()
-        self.assertFalse(peer.verify_peer_review(a))
+        self.assertFalse(peer.verify_peer_review(a, now=NOW))
 
         a = self.compile()
         a["reported_tests"].update(status="FAIL", passed=10, failed=1)
@@ -289,7 +289,7 @@ class DualPeerReviewContract(unittest.TestCase):
         a["unsigned_sha256_not_signature"] = sha256(
             peer.DOMAIN + peer._canonical(core)
         ).hexdigest()
-        self.assertFalse(peer.verify_peer_review(a))
+        self.assertFalse(peer.verify_peer_review(a, now=NOW))
 
     def test_new_authority_claim_cannot_be_hidden_behind_rehash(self):
         a = self.compile()
@@ -298,7 +298,7 @@ class DualPeerReviewContract(unittest.TestCase):
         a["unsigned_sha256_not_signature"] = sha256(
             peer.DOMAIN + peer._canonical(core)
         ).hexdigest()
-        self.assertFalse(peer.verify_peer_review(a))
+        self.assertFalse(peer.verify_peer_review(a, now=NOW))
 
     def test_forged_model_url_fails_replay_even_when_rehashed(self):
         a = self.compile()
@@ -307,7 +307,7 @@ class DualPeerReviewContract(unittest.TestCase):
         a["unsigned_sha256_not_signature"] = sha256(
             peer.DOMAIN + peer._canonical(core)
         ).hexdigest()
-        self.assertFalse(peer.verify_peer_review(a))
+        self.assertFalse(peer.verify_peer_review(a, now=NOW))
 
     def test_sha_patterns_reject_trailing_whitespace_and_nonhex(self):
         for bad in (SOURCE+" ", " "+SOURCE, SOURCE+"Z", "0"*39+"g"):
@@ -334,7 +334,81 @@ class DualPeerReviewContract(unittest.TestCase):
         a["unsigned_sha256_not_signature"] = sha256(
             peer.DOMAIN + peer._canonical(core)
         ).hexdigest()
-        self.assertFalse(peer.verify_peer_review(a))
+        self.assertFalse(peer.verify_peer_review(a, now=NOW))
+
+    def test_forged_rehashed_hold_cannot_hide_dissent(self):
+        p = packet()
+        p["reviewers"][1].update(verdict="REJECT", reason_code="SECURITY_RISK")
+        record = self.compile(p)
+        self.assertTrue(peer.verify_peer_review(record, now=NOW))
+        record["reasons"] = ["TESTS_UNAVAILABLE"]
+        body = {k: v for k, v in record.items() if k != "unsigned_sha256_not_signature"}
+        record["unsigned_sha256_not_signature"] = sha256(
+            peer.DOMAIN + peer._canonical(body)).hexdigest()
+        self.assertFalse(peer.verify_peer_review(record, now=NOW))
+
+    def test_forged_rehashed_ready_cannot_hide_failed_tests(self):
+        record = self.compile()
+        record["reported_tests"]["status"] = "FAIL"
+        record["reported_tests"]["failed"] = 1
+        body = {k: v for k, v in record.items() if k != "unsigned_sha256_not_signature"}
+        record["unsigned_sha256_not_signature"] = sha256(
+            peer.DOMAIN + peer._canonical(body)).hexdigest()
+        self.assertFalse(peer.verify_peer_review(record, now=NOW))
+
+    def test_replay_expiration_uses_independent_clock(self):
+        record = self.compile()
+        self.assertTrue(peer.verify_peer_review(record, now=NOW))
+        self.assertFalse(peer.verify_peer_review(
+            record, now=NOW + timedelta(seconds=peer.MAX_AGE_SECONDS + 1)))
+        self.assertFalse(peer.verify_peer_review(
+            record, now=NOW - timedelta(seconds=6)))
+        self.assertFalse(peer.verify_peer_review(
+            record, now=datetime(2026, 11, 19, 23, 0)))
+
+    def test_original_review_source_drift_cannot_be_hidden_by_rehash(self):
+        p = packet()
+        p["reviewers"][0]["source_sha"] = "f" * 40
+        record = self.compile(p)
+        self.assertIn("REVIEW_SOURCE_MISMATCH", record["reasons"])
+        self.assertTrue(peer.verify_peer_review(record, now=NOW))
+        proposer = next(row for row in record["reviewers"]
+                        if row["role"] == "PROPOSER")
+        proposer["review_source_sha_reported"] = SOURCE
+        body = {k: v for k, v in record.items() if k != "unsigned_sha256_not_signature"}
+        record["unsigned_sha256_not_signature"] = sha256(
+            peer.DOMAIN + peer._canonical(body)).hexdigest()
+        self.assertFalse(peer.verify_peer_review(record, now=NOW))
+
+    def test_empty_or_missing_trusted_clock_refused(self):
+        record = self.compile()
+        with self.assertRaises(TypeError):
+            peer.verify_peer_review(record)
+        self.assertFalse(peer.verify_peer_review(record, now=None))
+
+
+    def test_rehashed_fresh_top_timestamp_cannot_resurrect_old_reviews(self):
+        record = self.compile()
+        later = NOW + timedelta(seconds=peer.MAX_AGE_SECONDS + 50)
+        record["observed_at_utc"] = later.isoformat()
+        body = {k: v for k, v in record.items()
+                if k != "unsigned_sha256_not_signature"}
+        record["unsigned_sha256_not_signature"] = sha256(
+            peer.DOMAIN + peer._canonical(body)).hexdigest()
+        self.assertFalse(peer.verify_peer_review(record, now=later))
+
+    def test_claimed_hold_reason_cannot_replace_actual_negative_evidence(self):
+        p = packet()
+        p["reviewers"][1].update(verdict="REJECT", reason_code="SECURITY_RISK")
+        record = self.compile(p)
+        self.assertTrue(peer.verify_peer_review(record, now=NOW))
+        record["reasons"] = ["TESTS_UNAVAILABLE"]
+        body = {k: v for k, v in record.items()
+                if k != "unsigned_sha256_not_signature"}
+        record["unsigned_sha256_not_signature"] = sha256(
+            peer.DOMAIN + peer._canonical(body)).hexdigest()
+        self.assertFalse(peer.verify_peer_review(record, now=NOW))
+
 
     def test_no_external_functions_or_side_effects(self):
         import ast
